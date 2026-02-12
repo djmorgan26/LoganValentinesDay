@@ -8,7 +8,7 @@ A tiny interactive Valentine website (vanilla HTML/CSS/JS) from **David** to **L
 - Elephants + travel + sushi gag where **everything is a spicy tuna roll**
 - Emory / dermatology + David tech vibe
 - Date-night scene: cooking + wine + pottery
-- Hidden easter egg: **future dachshund** (because Logan wants one)
+- Hidden easter egg: **future weener dog** (because Logan wants one)
 
 ## Add your assets
 
