@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Logan’s Little Valentine Journey</title>
+  <meta name="description" content="A tiny interactive Valentine journey from David to Logan." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <noscript>This needs JavaScript to run ❤️</noscript>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="pill">💛 David → Logan</div>
+      <div class="progress" aria-label="Progress">
+        <div class="progress__bar" id="progressBar"></div>
+      </div>
+    </div>
+
+    <button class="iconbtn" id="musicBtn" aria-label="Toggle music" title="Music">
+      🎵
+    </button>
+  </header>
+
+  <main id="app" class="app" aria-live="polite"></main>
+
+  <footer class="footer">
+    <div class="footer__hint">Made with love + a little tech.</div>
+    <button class="paw" id="pawBtn" aria-label="Hidden paw" title="(psst)">
+      🐾
+    </button>
+  </footer>
+
+  <audio id="bgm" preload="auto" loop>
+    <!-- Optional. If you add assets/bg-music.mp3, it will play. -->
+    <source src="assets/bg-music.mp3" type="audio/mpeg" />
+  </audio>
+
+  <script src="app.js"></script>
+</body>
+</html>
