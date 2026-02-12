@@ -1,11 +1,5 @@
-/* Logan’s Little Valentine Journey — app.js
-   Single-page interactive Valentine site (vanilla HTML/CSS/JS).
-
-   Personalization:
-   - Put your photos in /assets/david.jpg and /assets/logan.jpg
-   - Optional: add /assets/bg-music.mp3
-   - Optional: add /assets/willow.png (a dachshund image to represent the future dog she wants)
-*/
+/* Logan’s Little Valentine Journey — rebuilt as an open-world stroll.
+   Explore the neighborhood, bump into hotspots, and read each scene inline. */
 
 const app = document.getElementById("app");
 const progressBar = document.getElementById("progressBar");
@@ -13,46 +7,131 @@ const pawBtn = document.getElementById("pawBtn");
 const musicBtn = document.getElementById("musicBtn");
 const bgm = document.getElementById("bgm");
 
+const worldLocations = [
+  {
+    id: "elephant",
+    name: "Elephant Atrium",
+    emoji: "🐘",
+    x: 22,
+    y: 48,
+    memoryLine: "Elephant hearts remember every kindness.",
+    vibe: "Footprints glow between string lights.",
+  },
+  {
+    id: "sushi",
+    name: "Hidden Sushi Bar",
+    emoji: "🍣",
+    x: 48,
+    y: 32,
+    memoryLine: "We once invented a menu with exactly one item.",
+    vibe: "Neon reflections, soy-scented air, zero chill.",
+  },
+  {
+    id: "travel",
+    name: "Travel Loft",
+    emoji: "✈️",
+    x: 66,
+    y: 56,
+    memoryLine: "Postcards of futures where we’re laughing somewhere new.",
+    vibe: "Suitcases, postcards, and a dachshund passport agent.",
+  },
+  {
+    id: "date",
+    name: "Date-Night Studio",
+    emoji: "🕯",
+    x: 36,
+    y: 72,
+    memoryLine: "Cooking + wine + pottery = chaotic romance.",
+    vibe: "Pots spinning, wine poured, playlists looping.",
+  },
+  {
+    id: "starlight",
+    name: "Starlight Outlook",
+    emoji: "🌌",
+    x: 78,
+    y: 26,
+    memoryLine: "Every timeline ends with me choosing you.",
+    vibe: "City skyline, meteor streak, dachshund constellation.",
+  },
+];
+
+const baseVisited = worldLocations.reduce((acc, loc) => {
+  acc[loc.id] = false;
+  return acc;
+}, {});
+
+const initialChatMessages = [
+  {
+    id: "assistant-intro",
+    role: "assistant",
+    text:
+      "Logan, it’s me. Wander the map, then ask me anything here. I’ll answer like it’s our own little telepathic date-night thread.",
+  },
+];
+
 const state = {
-  scene: "intro",
-  visited: { elephant: false, sushi: false, travel: false },
+  player: { x: 52, y: 76 },
+  visited: { ...baseVisited },
+  hoveredLocation: null,
+  activeLocation: null,
+  memoryLog: [],
+  worldHint: null,
   elephantSteps: [false, false, false],
-  sushiSelected: [], // 3 “menu items” (all spicy tuna roll… obviously)
+  sushiSelected: [],
   travelSeen: { paris: false, tokyo: false, italy: false },
   dateClicks: { cooking: false, wine: false, pottery: false },
   pawClicks: 0,
   musicOn: false,
+  chatMessages: [...initialChatMessages],
+  chatDraft: "",
+  chatLoading: false,
 };
 
-function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+const MOVEMENT_STEP = 3.2;
+const NEAR_THRESHOLD = 12;
 
-function setProgress() {
-  const baseMap = {
-    intro: 6,
-    choose: 12,
-    elephant: 25,
-    sushi: 25,
-    travel: 25,
-    future: 70,
-    date: 85,
-    finale: 100,
-  };
-
-  let p = baseMap[state.scene] ?? 10;
-  const completedPaths = Object.values(state.visited).filter(Boolean).length;
-
-  if (state.scene === "choose") p += completedPaths * 10;
-  if (["elephant", "sushi", "travel"].includes(state.scene)) p += (completedPaths - 1) * 10;
-
-  progressBar.style.width = `${clamp(p, 0, 100)}%`;
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n));
 }
 
-function canContinueToFuture() {
-  const completedPaths = Object.values(state.visited).filter(Boolean).length;
-  return completedPaths >= 2;
+function distance(point, loc) {
+  const dx = point.x - loc.x;
+  const dy = point.y - loc.y;
+  return Math.sqrt(dx * dx + dy * dy);
 }
 
-function safeAsset(path) { return path || ""; }
+function safeAsset(path) {
+  return path || "";
+}
+
+function getLocationById(id) {
+  return worldLocations.find((loc) => loc.id === id);
+}
+
+function getVisitedCount() {
+  return Object.values(state.visited).filter(Boolean).length;
+}
+
+function defaultWorldMessage() {
+  const visitedCount = getVisitedCount();
+  if (!visitedCount) {
+    return "Use arrow keys or WASD to wander. When a spot glows, press Enter or tap it.";
+  }
+  if (visitedCount < worldLocations.length) {
+    return "Keep strolling—each glowing nook hides a different kind of us.";
+  }
+  return "Revisit any stop to hear it react to how many memories you’ve collected.";
+}
+
+function getWorldMessage() {
+  if (state.worldHint) return state.worldHint;
+  if (state.activeLocation) return "Stay awhile, then hit ← Back to keep roaming.";
+  if (state.hoveredLocation) {
+    const loc = getLocationById(state.hoveredLocation);
+    if (loc) return `You’re beside ${loc.name}. Press Enter or tap to slip inside.`;
+  }
+  return defaultWorldMessage();
+}
 
 function avatarBlock() {
   return `
@@ -63,129 +142,51 @@ function avatarBlock() {
   `;
 }
 
-const scenes = {
-  intro: () => `
-    <section class="card">
-      <div class="hero">
-        <div>
-          <h1 class="title">Hi Logan 💛</h1>
-          <p class="subtitle">
-            It’s David.<br/>
-            I made you a tiny journey—part romantic, part playful, part <em>us</em>.<br/>
-            Starting in <strong>Virginia-Highland, Atlanta</strong>.
-          </p>
-        </div>
-        ${avatarBlock()}
+function renderLocationHeading(title, subtitle, emoji) {
+  return `
+    <div class="panelHeading">
+      <div>
+        <h2 class="title">${emoji} ${title}</h2>
+        <p class="subtitle">${subtitle}</p>
       </div>
-      <div class="section">
-        <div class="note">
-          <strong>Instructions:</strong> tap things, explore, and try to find the hidden dachshund 🐾.<br/>
-          (She doesn’t exist yet… but she’s already iconic.)
-          <br/><br/>
-          Also: every sushi item is a <strong>spicy tuna roll</strong>. This is not negotiable.
-        </div>
-        <div class="row">
-          <button class="btn primary" data-go="choose">Begin →</button>
-        </div>
-      </div>
-    </section>
-  `,
+      ${avatarBlock()}
+    </div>
+  `;
+}
 
-  choose: () => {
-    const completedPaths = Object.values(state.visited).filter(Boolean).length;
-    return `
-      <section class="card">
-        <div class="hero">
-          <div>
-            <h2 class="title">Virginia-Highland Stroll ✨</h2>
-            <p class="subtitle">
-              The neighborhood’s glowing, it’s date-night energy, and you get to choose what to follow first.
-            </p>
-          </div>
-          ${avatarBlock()}
-        </div>
-
-        <div class="section">
-          <div class="badge">Completed stops: ${completedPaths}/3 • Need 2 to unlock the “future”</div>
-
-          <div class="grid3" role="list">
-            <div class="tile" role="listitem" data-go="elephant">
-              <div class="tile__title">🐘 Elephant Wonder Corner</div>
-              <p class="tile__desc">Footprints, little surprises, and a big-heart moment.</p>
-            </div>
-
-            <div class="tile" role="listitem" data-go="sushi">
-              <div class="tile__title">🍣 Sushi Spot</div>
-              <p class="tile__desc">A menu so unhinged it only contains one thing.</p>
-            </div>
-
-            <div class="tile" role="listitem" data-go="travel">
-              <div class="tile__title">✈️ Travel Portal Lane</div>
-              <p class="tile__desc">Three postcards. Three mini-memories.</p>
-            </div>
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="row">
-            <button class="btn ${canContinueToFuture() ? "good" : ""}" ${canContinueToFuture() ? `data-go="future"` : "disabled"}
-              title="${canContinueToFuture() ? "Unlocked!" : "Visit any two stops first"}">
-              ${canContinueToFuture() ? "Continue to the Future →" : "Continue to the Future (locked)"}
-            </button>
-            <button class="btn" data-go="intro">Restart</button>
-          </div>
-        </div>
-      </section>
-    `;
-  },
-
+const locationPanels = {
   elephant: () => {
     const lines = [
-      "You love elephants because you have an elephant heart: big, gentle, and loyal.",
-      "You’re smart, steady, and somehow still ridiculously cute about everything you do.",
-      "I’m not letting go. You’re my favorite person in every zip code, timeline, and universe.",
+      "Elephant hearts, elephant memory, elephant-level loyalty.",
+      "You’re soft and steady and somehow still ridiculous about everything.",
+      "I’m not letting go. Ever.",
     ];
     const revealedCount = state.elephantSteps.filter(Boolean).length;
 
     return `
-      <section class="card">
-        <div class="hero">
-          <div>
-            <h2 class="title">🐘 Elephant Wonder Corner</h2>
-            <p class="subtitle">
-              There are three glowing footprints on the path. Tap them.
-              <br/>(${revealedCount}/3)
-            </p>
-          </div>
-          ${avatarBlock()}
-        </div>
-
-        <div class="section">
-          <div class="footprints">
-            ${[0,1,2].map(i => `
+      ${renderLocationHeading("Elephant Atrium", "Tap each glowing footprint to reveal a secret.", "🐘")}
+      <div class="note">${getLocationById("elephant").vibe}</div>
+      <div class="footprints">
+        ${[0, 1, 2]
+          .map(
+            (i) => `
               <div class="foot ${state.elephantSteps[i] ? "done" : ""}" data-foot="${i}">
                 ${state.elephantSteps[i] ? "✨" : "🐾"}<br/>
                 ${state.elephantSteps[i] ? "Revealed" : "Footprint"}
               </div>
-            `).join("")}
-          </div>
-
-          <div class="note" id="elephantNote">
-            ${state.elephantSteps.map((v, i) => v ? `• ${lines[i]}` : "").filter(Boolean).join("<br/>") || "Tap a footprint to reveal a little message."}
-          </div>
-
-          ${revealedCount === 3 ? `
-            <div class="note">
-              <strong>Future-dog cameo:</strong> a tiny dachshund appears in your imagination, looks at you, then judges David lovingly.
-              <br/>“I approve… but only if there are snacks.”
-            </div>
-          ` : ""}
-
-          <div class="row">
-            <button class="btn primary" data-go="choose">Back to Virginia-Highland →</button>
-          </div>
-        </div>
-      </section>
+            `
+          )
+          .join("")}
+      </div>
+      <div class="note" id="elephantNote">
+        ${state.elephantSteps
+          .map((v, i) => (v ? `• ${lines[i]}` : ""))
+          .filter(Boolean)
+          .join("<br/>") || "Tap each print to hear me gush."}
+      </div>
+      ${revealedCount === 3
+        ? `<div class="note">A tiny dachshund apparition appears, approves of us, and demands snacks.</div>`
+        : ""}
     `;
   },
 
@@ -197,254 +198,450 @@ const scenes = {
       { id: "spicy4", label: "Spicy Tuna Roll", desc: "The chef said: ‘trust me’ (it’s spicy tuna roll)." },
       { id: "spicy5", label: "Spicy Tuna Roll", desc: "In a different font. Still spicy tuna roll." },
     ];
-
-    const slots = [0,1,2].map(i => state.sushiSelected[i] ? "🍣 Spicy Tuna Roll" : "Pick one").map((t, idx) => {
-      const filled = state.sushiSelected[idx] ? "filled" : "";
-      return `<div class="slot ${filled}">${t}</div>`;
-    }).join("");
-
+    const slots = [0, 1, 2]
+      .map((i) => (state.sushiSelected[i] ? "🍣 Spicy Tuna Roll" : "Pick one"))
+      .map((t, idx) => {
+        const filled = state.sushiSelected[idx] ? "filled" : "";
+        return `<div class="slot ${filled}">${t}</div>`;
+      })
+      .join("");
     const done = state.sushiSelected.length >= 3;
 
     return `
-      <section class="card">
-        <div class="hero">
-          <div>
-            <h2 class="title">🍣 Sushi Spot</h2>
-            <p class="subtitle">
-              Welcome. The menu is… extremely focused.
-              <br/>Select <strong>three</strong> items to build your order.
-            </p>
-          </div>
-          ${avatarBlock()}
-        </div>
-
-        <div class="section">
-          <div class="badge">House rule: everything is a spicy tuna roll.</div>
-
-          <div class="sushiSlots" aria-label="Order slots">
-            ${slots}
-          </div>
-
-          <div class="grid3" style="margin-top: 10px;">
-            ${menu.map(item => `
+      ${renderLocationHeading("Hidden Sushi Bar", "Assemble three rolls. Spoiler: they’re the same roll.", "🍣")}
+      <div class="note">${getLocationById("sushi").vibe}</div>
+      <div class="sushiSlots">${slots}</div>
+      <div class="grid3" style="margin-top: 10px;">
+        ${menu
+          .map(
+            (item) => `
               <div class="tile" data-sushi="${item.id}">
                 <div class="tile__title">${item.label}</div>
                 <p class="tile__desc">${item.desc}</p>
               </div>
-            `).join("")}
-          </div>
-
-          <div class="row">
-            <button class="btn warn" data-sushi-reset>Reset order</button>
-            <button class="btn ${done ? "good" : ""}" ${done ? "" : "disabled"} data-sushi-finish>
-              ${done ? "Place Order →" : "Place Order (pick 3)"}
-            </button>
-          </div>
-
-          ${done ? `
-            <div class="note">
-              “Logan, I’d eat a million spicy tuna rolls if it meant I get to hear you laugh across the table.”
-              <br/><br/>
-              <button class="btn" data-soy-joke>Press for soy joke</button>
-              <span id="soyOut"></span>
-            </div>
-          ` : ""}
-
-          <div class="row">
-            <button class="btn primary" data-go="choose">Back to Virginia-Highland →</button>
-          </div>
-        </div>
-      </section>
+            `
+          )
+          .join("")}
+      </div>
+      <div class="row">
+        <button class="btn warn" data-sushi-reset>Reset order</button>
+        <button class="btn ${done ? "good" : ""}" ${done ? "" : "disabled"} data-sushi-finish>
+          ${done ? "Place Order" : "Place Order (pick 3)"}
+        </button>
+      </div>
+      ${done
+        ? `<div class="note">
+            “Logan, I’d eat a million spicy tuna rolls if it meant hearing you laugh across the table.”<br/><br/>
+            <button class="btn" data-soy-joke>Press for soy joke</button>
+            <span id="soyOut"></span>
+          </div>`
+        : ""}
     `;
   },
 
   travel: () => {
     const seenCount = Object.values(state.travelSeen).filter(Boolean).length;
-
     return `
-      <section class="card">
-        <div class="hero">
-          <div>
-            <h2 class="title">✈️ Travel Portal Lane</h2>
-            <p class="subtitle">Three postcards are glowing. Tap to peek into a tiny future-memory. (${seenCount}/3)</p>
-          </div>
-          ${avatarBlock()}
-        </div>
-
-        <div class="section">
-          <div class="row">
-            <button class="btn primary" data-postcard="paris">🗼 Paris</button>
-            <button class="btn primary" data-postcard="tokyo">🗾 Tokyo</button>
-            <button class="btn primary" data-postcard="italy">🍷 Italy</button>
-          </div>
-
-          <div class="note" id="postcardOut">
-            Tap a postcard.
-          </div>
-
-          <div class="row">
-            <button class="btn primary" data-go="choose">Back to Virginia-Highland →</button>
-          </div>
-        </div>
-      </section>
+      ${renderLocationHeading("Travel Loft", "Flip any postcard and pocket the future.", "✈️")}
+      <div class="note">${getLocationById("travel").vibe}</div>
+      <div class="row" style="flex-wrap: wrap;">
+        <button class="btn primary" data-postcard="paris">🗼 Paris</button>
+        <button class="btn primary" data-postcard="tokyo">🗾 Tokyo</button>
+        <button class="btn primary" data-postcard="italy">🍷 Italy</button>
+      </div>
+      <div class="note" id="postcardOut">${seenCount ? "Tap another postcard." : "Pick a postcard."}</div>
     `;
   },
 
-  future: () => `
-    <section class="card">
-      <div class="hero">
-        <div>
-          <h2 class="title">The Future Path 🌙</h2>
-          <p class="subtitle">
-            Two stops down… now the part where I get a little serious (but not too serious).
-          </p>
-        </div>
-        ${avatarBlock()}
-      </div>
-
-      <div class="section">
-        <div class="note">
-          <strong>Dr. Logan.</strong> Emory. Dermatology.
-          <br/>Saving skin, saving days, looking unfairly good doing it.
-        </div>
-
-        <div class="note">
-          And me—building tech, chasing big ideas…
-          <br/>But my favorite future is the one where I come home to <strong>you</strong>.
-        </div>
-
-        <div class="note">
-          And one day? We get that little dachshund you want.
-          <br/>She will be tiny. She will be spoiled. She will 100% think she’s in charge.
-        </div>
-
-        <div class="row">
-          <button class="btn primary" data-go="date">Continue → Tonight’s Date</button>
-          <button class="btn" data-go="choose">Back</button>
-        </div>
-      </div>
-    </section>
-  `,
-
   date: () => {
-    const all = Object.values(state.dateClicks).every(Boolean);
     const mk = (k, emoji, label) => `
       <button class="btn ${state.dateClicks[k] ? "good" : "primary"}" data-date="${k}">
         ${emoji} ${label} ${state.dateClicks[k] ? "✓" : ""}
       </button>
     `;
-
+    const all = Object.values(state.dateClicks).every(Boolean);
     return `
-      <section class="card">
-        <div class="hero">
-          <div>
-            <h2 class="title">Tonight ✨</h2>
-            <p class="subtitle">
-              Click all three to “lock in” our Valentine plan.
-            </p>
-          </div>
-          ${avatarBlock()}
-        </div>
-
-        <div class="section">
-          <div class="row">
-            ${mk("cooking", "🍝", "Cooking")}
-            ${mk("wine", "🍷", "Wine")}
-            ${mk("pottery", "🏺", "Pottery")}
-          </div>
-
-          <div class="note" id="dateOut">
-            ${all
-              ? `Unlocked: <strong>the final message</strong> 💛`
-              : `It’s giving “cozy, romantic, and you laughing at me for taking recipes too seriously.”`}
-          </div>
-
-          <div class="row">
-            <button class="btn ${all ? "good" : ""}" ${all ? `data-go="finale"` : "disabled"}>
-              ${all ? "Finale →" : "Finale (click all three)"}
-            </button>
-            <button class="btn" data-go="choose">Back</button>
-          </div>
-        </div>
-      </section>
+      ${renderLocationHeading("Date-Night Studio", "Toggle every station to craft tonight’s vibe.", "🕯")}
+      <div class="note">${getLocationById("date").vibe}</div>
+      <div class="row" style="flex-wrap: wrap;">
+        ${mk("cooking", "🍝", "Cooking")}
+        ${mk("wine", "🍷", "Wine")}
+        ${mk("pottery", "🏺", "Pottery")}
+      </div>
+      <div class="note" id="dateOut">
+        ${all
+          ? "Unlocked: cozy night secured. Wander to Starlight Outlook whenever you’re ready for the finale."
+          : "It’s giving ‘cozy, romantic, and you laughing at me for taking recipes too seriously.’"}
+      </div>
     `;
   },
 
-  finale: () => `
-    <section class="card">
-      <div class="hero">
-        <div>
-          <h2 class="title">Happy Valentine’s Day, Logan 💛</h2>
-          <p class="subtitle">
-            I choose you. In every timeline.
-          </p>
-        </div>
-        ${avatarBlock()}
+  starlight: () => {
+    const visitedCount = getVisitedCount();
+    return `
+      ${renderLocationHeading("Starlight Outlook", "The skyline listens while I gush about you.", "🌌")}
+      <div class="note">${getLocationById("starlight").vibe}</div>
+      <div class="note">
+        You’ve touched ${visitedCount}/${worldLocations.length} neon memories tonight.
+        <br/>No quests. No checklists. Just us orbiting the same feeling.
       </div>
-
-      <div class="section">
-        <div class="note">
-          You’re my favorite place to be.
-          <br/>My favorite laugh.
-          <br/>My favorite future.
-        </div>
-
-        <div class="note">
-          Love,
-          <br/><strong>David</strong>
-        </div>
-
-        <div class="row">
-          <button class="btn primary" data-replay>Replay</button>
-          <button class="btn warn" data-find-willow>Find the dachshund 🐾</button>
-        </div>
+      <div class="note">
+        You’re my favorite place to be.
+        <br/>My favorite laugh.
+        <br/>My favorite future.
       </div>
-    </section>
-  `,
+      <div class="note">
+        Love,
+        <br/><strong>David</strong>
+      </div>
+      <div class="row">
+        <button class="btn warn" data-find-willow>Summon the dachshund 🐾</button>
+      </div>
+    `;
+  },
 };
 
+function setProgress() {
+  const count = getVisitedCount();
+  const percent = (count / worldLocations.length) * 100;
+  progressBar.style.width = `${clamp(percent, 0, 100)}%`;
+}
+
+function renderWorld() {
+  return `
+    <section class="world">
+      <div class="world__map" aria-label="Virginia-Highland dream map">
+        <div class="world__glow"></div>
+        ${worldLocations
+          .map((loc) => {
+            const visited = state.visited[loc.id];
+            const near = state.hoveredLocation === loc.id;
+            return `
+              <button class="world__spot ${visited ? "world__spot--visited" : ""} ${
+              near ? "world__spot--near" : ""
+            }" style="left:${loc.x}%; top:${loc.y}%" data-location="${loc.id}">
+                <span class="world__spotIcon">${loc.emoji}</span>
+                <span class="world__spotLabel">${loc.name}</span>
+              </button>
+            `;
+          })
+          .join("")}
+        <div class="world__player" style="left:${state.player.x}%; top:${state.player.y}%" aria-label="David exploring">
+          <span>💛</span>
+        </div>
+      </div>
+      <aside class="world__panel">
+        ${renderWorldPanel()}
+      </aside>
+    </section>
+  `;
+}
+
+function renderWorldPanel() {
+  if (!state.activeLocation) {
+    return `
+      <div class="panelIntro">
+        <div class="panelIntro__top">
+          <div>
+            <h2 class="title">Virginia-Highland Nights</h2>
+            <p class="subtitle" id="worldMessage">${getWorldMessage()}</p>
+          </div>
+          ${avatarBlock()}
+        </div>
+        <div class="panelStats">
+          <div>
+            <div class="panelStats__value">${getVisitedCount()}</div>
+            <div class="panelStats__label">Spots explored</div>
+          </div>
+          <div>
+            <div class="panelStats__value">${Math.round(clamp((getVisitedCount() / worldLocations.length) * 100, 0, 100))}%</div>
+            <div class="panelStats__label">Map glow</div>
+          </div>
+        </div>
+        <div class="memoryList">
+          <div class="memoryList__title">Collected Moments</div>
+          ${renderMemoryLog()}
+        </div>
+        ${renderChatPanel()}
+      </div>
+    `;
+  }
+
+  const renderer = locationPanels[state.activeLocation];
+  return `
+    <div class="panelActive">
+      <div class="panelActive__header">
+        <button class="iconbtn panelClose" data-close-panel>← Back to the neighborhood</button>
+      </div>
+      ${renderer ? renderer() : `<p class="subtitle">Lost in thought…</p>`}
+    </div>
+  `;
+}
+
+function renderMemoryLog() {
+  if (!state.memoryLog.length) {
+    return `<div class="memoryList__empty">Memories you uncover will stack here.</div>`;
+  }
+  return state.memoryLog
+    .map(
+      (entry) => `
+        <div class="memoryList__item">
+          <div class="memoryList__emoji">${entry.emoji}</div>
+          <div>
+            <div class="memoryList__name">${entry.title}</div>
+            <div class="memoryList__line">${entry.line}</div>
+          </div>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function renderChatPanel() {
+  const messageList = state.chatMessages
+    .map((msg) => renderChatBubble(msg))
+    .join("") || `<div class="chat__empty">No messages yet.</div>`;
+
+  return `
+    <div class="chat" aria-live="polite">
+      <div class="chat__header">
+        Logan ↔ David
+        <span class="chat__status">${state.chatLoading ? "typing…" : ""}</span>
+      </div>
+      <div class="chat__messages" id="chatMessages">${messageList}</div>
+      <form class="chat__composer" data-chat-form>
+        <textarea
+          name="loganMessage"
+          placeholder="Type as Logan…"
+          rows="2"
+          ${state.chatLoading ? "disabled" : ""}
+        >${state.chatDraft}</textarea>
+        <button class="btn primary" type="submit" ${state.chatLoading ? "disabled" : ""}>
+          ${state.chatLoading ? "Sending" : "Send"}
+        </button>
+      </form>
+      <div class="chat__hint">
+        I’ll keep the tone romantic + playful, just like us.
+      </div>
+    </div>
+  `;
+}
+
+function renderChatBubble(msg) {
+  const isAssistant = msg.role === "assistant";
+  const speaker = isAssistant ? "David" : "Logan";
+  return `
+    <div class="chat__bubble ${isAssistant ? "chat__bubble--assistant" : "chat__bubble--logan"}">
+      <div class="chat__bubbleLabel">${speaker}</div>
+      <div>${msg.text}</div>
+    </div>
+  `;
+}
+
+function bindChat() {
+  const form = document.querySelector("[data-chat-form]");
+  if (!form) return;
+  const textarea = form.querySelector("textarea");
+  if (textarea) {
+    textarea.value = state.chatDraft;
+    textarea.addEventListener("input", (event) => {
+      state.chatDraft = event.target.value;
+    });
+  }
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (state.chatLoading) return;
+    const value = (textarea?.value || "").trim();
+    if (!value) return;
+    sendChatMessage(value);
+  });
+  scrollChatToBottom();
+}
+
+function scrollChatToBottom() {
+  requestAnimationFrame(() => {
+    const box = document.getElementById("chatMessages");
+    if (box) box.scrollTop = box.scrollHeight;
+  });
+}
+
+async function sendChatMessage(message) {
+  const clientMsg = createChatMessage("user", message);
+  state.chatMessages.push(clientMsg);
+  state.chatDraft = "";
+  state.chatLoading = true;
+  trimChatMessages();
+  render();
+
+  try {
+    const payload = {
+      prompt: message,
+      history: getChatHistoryPayload(),
+    };
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error("Failed to reach AI service");
+    const data = await response.json();
+    const reply = data.reply?.trim() || "I’m lost in thought—try that again?";
+    state.chatMessages.push(createChatMessage("assistant", reply));
+  } catch (error) {
+    state.chatMessages.push(
+      createChatMessage(
+        "assistant",
+        "I want to answer, but the AI connection hiccuped. Give me a second and try again?"
+      )
+    );
+  } finally {
+    state.chatLoading = false;
+    trimChatMessages();
+    render();
+  }
+}
+
+function getChatHistoryPayload() {
+  return state.chatMessages.slice(-8).map((msg) => ({ role: msg.role, text: msg.text }));
+}
+
+function createChatMessage(role, text) {
+  return { id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, role, text };
+}
+
+function trimChatMessages() {
+  const max = 12;
+  if (state.chatMessages.length > max) {
+    state.chatMessages = state.chatMessages.slice(-max);
+  }
+}
+
 function render() {
+  updateNearbyLocation();
   setProgress();
-  app.innerHTML = scenes[state.scene]();
+  app.innerHTML = renderWorld();
   bindSceneHandlers();
 }
 
-function go(scene) {
-  state.scene = scene;
+function updateNearbyLocation() {
+  let selected = null;
+  let bestDistance = Infinity;
+  worldLocations.forEach((loc) => {
+    const d = distance(state.player, loc);
+    if (d < NEAR_THRESHOLD && d < bestDistance) {
+      bestDistance = d;
+      selected = loc.id;
+    }
+  });
+  state.hoveredLocation = selected;
+  if (!selected && !state.activeLocation) {
+    state.worldHint = null;
+  }
+}
+
+function addMemory(id) {
+  const loc = getLocationById(id);
+  if (!loc) return;
+  if (state.memoryLog.some((entry) => entry.id === id)) return;
+  state.memoryLog.unshift({ id, title: loc.name, line: loc.memoryLine, emoji: loc.emoji });
+  state.memoryLog = state.memoryLog.slice(0, 6);
+}
+
+function attemptEnterLocation(id) {
+  if (!id) return;
+  if (state.hoveredLocation !== id) {
+    const loc = getLocationById(id);
+    state.worldHint = loc ? `Walk a little closer to ${loc.name}.` : "Walk closer.";
+    render();
+    return;
+  }
+  enterLocation(id);
+}
+
+function enterLocation(id) {
+  state.activeLocation = id;
+  state.worldHint = null;
+  if (!state.visited[id]) {
+    state.visited[id] = true;
+    addMemory(id);
+  }
+  render();
+}
+
+function exitLocation() {
+  state.activeLocation = null;
+  state.worldHint = null;
+  render();
+}
+
+function movePlayer(dx, dy) {
+  state.player.x = clamp(state.player.x + dx, 6, 94);
+  state.player.y = clamp(state.player.y + dy, 8, 92);
+  if (!state.activeLocation) {
+    state.worldHint = null;
+  }
   render();
 }
 
 function bindSceneHandlers() {
-  // navigation
-  document.querySelectorAll("[data-go]").forEach(el => {
-    el.addEventListener("click", () => go(el.getAttribute("data-go")));
-  });
-  document.querySelectorAll(".tile[data-go]").forEach(el => {
-    el.addEventListener("click", () => go(el.getAttribute("data-go")));
+  document.querySelectorAll("[data-location]").forEach((el) => {
+    el.addEventListener("click", () => attemptEnterLocation(el.getAttribute("data-location")));
   });
 
-  // Elephant footprints
-  document.querySelectorAll("[data-foot]").forEach(el => {
+  const closeBtn = document.querySelector("[data-close-panel]");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => exitLocation());
+  }
+
+  bindLocationInteractions();
+
+  document.querySelectorAll("[data-find-willow]").forEach((btn) => {
+    btn.addEventListener("click", () => openDogModal());
+  });
+
+  bindChat();
+}
+
+function bindLocationInteractions() {
+  if (state.activeLocation === "elephant") bindElephant();
+  if (state.activeLocation === "sushi") bindSushi();
+  if (state.activeLocation === "travel") bindTravel();
+  if (state.activeLocation === "date") bindDate();
+}
+
+function bindElephant() {
+  document.querySelectorAll("[data-foot]").forEach((el) => {
     el.addEventListener("click", () => {
       const idx = Number(el.getAttribute("data-foot"));
       state.elephantSteps[idx] = true;
-      state.visited.elephant = true;
       render();
     });
   });
+}
 
-  // Sushi selection
-  document.querySelectorAll("[data-sushi]").forEach(el => {
+function bindSushi() {
+  document.querySelectorAll("[data-sushi]").forEach((el) => {
     el.addEventListener("click", () => {
       if (state.sushiSelected.length >= 3) return;
       state.sushiSelected.push(el.getAttribute("data-sushi"));
-      state.visited.sushi = true;
       render();
     });
   });
 
   const resetBtn = document.querySelector("[data-sushi-reset]");
-  if (resetBtn) resetBtn.addEventListener("click", () => { state.sushiSelected = []; render(); });
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      state.sushiSelected = [];
+      render();
+    });
+  }
+
+  const finishBtn = document.querySelector("[data-sushi-finish]");
+  if (finishBtn) {
+    finishBtn.addEventListener("click", () => {
+      // no-op; just keep shimmering.
+    });
+  }
 
   const soyBtn = document.querySelector("[data-soy-joke]");
   if (soyBtn) {
@@ -455,61 +652,67 @@ function bindSceneHandlers() {
       soyBtn.textContent = "Soy joke delivered ✅";
     });
   }
+}
 
-  // Travel postcards
-  document.querySelectorAll("[data-postcard]").forEach(el => {
-    el.addEventListener("click", () => {
-      const key = el.getAttribute("data-postcard");
+function bindTravel() {
+  document.querySelectorAll("[data-postcard]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const key = btn.getAttribute("data-postcard");
       state.travelSeen[key] = true;
-      state.visited.travel = true;
-
       const out = document.getElementById("postcardOut");
       if (!out) return;
-
       const copy = {
         paris: "Paris: you pretending you aren’t cold; me pretending I’m not lost. We still end up kissing at sunset.",
         tokyo: "Tokyo: skincare aisle. You go full dermatologist mode and I’m just your proud little assistant.",
         italy: "Italy: wine + pasta + your laugh. Our future dachshund somehow becomes a local celebrity.",
       }[key];
-
       out.innerHTML = `✨ <strong>${copy}</strong>`;
-      setProgress();
     });
   });
+}
 
-  // Date clicks
-  document.querySelectorAll("[data-date]").forEach(el => {
-    el.addEventListener("click", () => {
-      const k = el.getAttribute("data-date");
-      state.dateClicks[k] = true;
+function bindDate() {
+  document.querySelectorAll("[data-date]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const key = btn.getAttribute("data-date");
+      state.dateClicks[key] = true;
       render();
     });
   });
-
-  // Finale actions
-  const replay = document.querySelector("[data-replay]");
-  if (replay) {
-    replay.addEventListener("click", () => {
-      const musicOn = state.musicOn;
-      Object.assign(state, {
-        scene: "intro",
-        visited: { elephant: false, sushi: false, travel: false },
-        elephantSteps: [false, false, false],
-        sushiSelected: [],
-        travelSeen: { paris: false, tokyo: false, italy: false },
-        dateClicks: { cooking: false, wine: false, pottery: false },
-        pawClicks: 0,
-        musicOn,
-      });
-      go("intro");
-    });
-  }
-
-  const findDog = document.querySelector("[data-find-willow]");
-  if (findDog) findDog.addEventListener("click", () => openDogModal());
 }
 
-// Paw easter egg
+document.addEventListener("keydown", (event) => {
+  const key = event.key.toLowerCase();
+  if (key === "escape" && state.activeLocation) {
+    event.preventDefault();
+    exitLocation();
+    return;
+  }
+
+  const movementMap = {
+    arrowup: { dx: 0, dy: -MOVEMENT_STEP },
+    w: { dx: 0, dy: -MOVEMENT_STEP },
+    arrowdown: { dx: 0, dy: MOVEMENT_STEP },
+    s: { dx: 0, dy: MOVEMENT_STEP },
+    arrowleft: { dx: -MOVEMENT_STEP, dy: 0 },
+    a: { dx: -MOVEMENT_STEP, dy: 0 },
+    arrowright: { dx: MOVEMENT_STEP, dy: 0 },
+    d: { dx: MOVEMENT_STEP, dy: 0 },
+  };
+
+  if (movementMap[key]) {
+    event.preventDefault();
+    if (state.activeLocation) return;
+    movePlayer(movementMap[key].dx, movementMap[key].dy);
+    return;
+  }
+
+  if (key === "enter" && !state.activeLocation && state.hoveredLocation) {
+    event.preventDefault();
+    attemptEnterLocation(state.hoveredLocation);
+  }
+});
+
 pawBtn.addEventListener("click", () => {
   state.pawClicks += 1;
   if (state.pawClicks >= 5) {
@@ -518,7 +721,6 @@ pawBtn.addEventListener("click", () => {
   }
 });
 
-// Music toggle
 musicBtn.addEventListener("click", async () => {
   state.musicOn = !state.musicOn;
   if (state.musicOn) {
@@ -527,10 +729,9 @@ musicBtn.addEventListener("click", async () => {
       await bgm.play();
       musicBtn.textContent = "🔊";
     } catch {
-      // no music file or blocked autoplay
       state.musicOn = false;
       musicBtn.textContent = "🎵";
-      alert("Add assets/bg-music.mp3 if you want music 🎵");
+      alert("Add assets/bg-music.(mp3/m4a/wav) if you want music 🎵");
     }
   } else {
     bgm.pause();
@@ -565,8 +766,12 @@ function openDogModal() {
       </div>
     </div>
   `;
-  overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
-  overlay.querySelectorAll("[data-close]").forEach(btn => btn.addEventListener("click", () => overlay.remove()));
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+  overlay.querySelectorAll("[data-close]").forEach((btn) =>
+    btn.addEventListener("click", () => overlay.remove())
+  );
   document.body.appendChild(overlay);
 }
 

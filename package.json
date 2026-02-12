@@ -1,0 +1,9 @@
+{
+  "name": "logan-valentines-day",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interactive open-world Valentine experience with AI chat.",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
