@@ -497,16 +497,23 @@
       robotGroup.position.set(pairPosition.x, 0, pairPosition.z);
       doctorGroup.position.set(pairPosition.x + 0.8, 0, pairPosition.z);
 
-      // Camera follow
-      camera.position.x += (pairPosition.x - camera.position.x) * 0.05;
-      camera.position.z += (pairPosition.z + 10 - camera.position.z) * 0.05;
-      camera.lookAt(pairPosition.x, 0, pairPosition.z);
+      // Face movement direction
+      const angle = Math.atan2(dx, dz);
+      robotGroup.rotation.y = angle;
+      doctorGroup.rotation.y = angle;
 
       // Simple walking animation (bob)
       const time = Date.now() * 0.01;
       robotGroup.position.y = Math.abs(Math.sin(time)) * 0.1;
       doctorGroup.position.y = Math.abs(Math.sin(time + 1)) * 0.1;
     }
+
+    // Camera follows tightly — fixed offset above and behind
+    const camTargetX = pairPosition.x;
+    const camTargetZ = pairPosition.z + 8;
+    camera.position.x += (camTargetX - camera.position.x) * 0.12;
+    camera.position.z += (camTargetZ - camera.position.z) * 0.12;
+    camera.lookAt(pairPosition.x, 0, pairPosition.z);
 
     // Check proximity to roam spots
     roamMarkers.forEach((marker) => {
@@ -571,12 +578,11 @@
     mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
     handleRaycast();
 
-    // Touch-to-move for roaming
+    // Touch-to-move for roaming: move toward tap direction
     if (phase === "roaming") {
-      const worldX = (mouse.x * 7);
-      const worldZ = (-mouse.y * 6);
-      pairPosition.x = Math.max(-7, Math.min(7, worldX));
-      pairPosition.z = Math.max(-6, Math.min(7, worldZ));
+      const stepSize = 1.5;
+      pairPosition.x = Math.max(-7, Math.min(7, pairPosition.x + mouse.x * stepSize));
+      pairPosition.z = Math.max(-6, Math.min(7, pairPosition.z - mouse.y * stepSize));
     }
   }
 
