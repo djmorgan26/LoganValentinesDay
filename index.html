@@ -3,42 +3,173 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Logan’s Little Valentine Journey</title>
-  <meta name="description" content="A tiny interactive Valentine journey from David to Logan." />
+  <title>For Logan</title>
+  <meta name="description" content="A cinematic love letter from David to Logan." />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <noscript>This needs JavaScript to run ❤️</noscript>
 
-  <header class="topbar">
-    <div class="brand">
-      <div class="pill">💛 David → Logan</div>
-      <div class="progress" aria-label="Progress">
-        <div class="progress__bar" id="progressBar"></div>
+  <!-- CURTAIN OVERLAY -->
+  <div id="curtain" class="curtain">
+    <div class="curtain__inner">
+      <div class="curtain__avatars">
+        <img class="curtain__avatar" src="assets/david.jpg" alt="David" onerror="this.style.display='none'" />
+        <img class="curtain__avatar" src="assets/logan.jpg" alt="Logan" onerror="this.style.display='none'" />
       </div>
+      <button id="curtainBtn" class="curtain__btn">Begin Our Story</button>
     </div>
+  </div>
 
-    <button class="iconbtn" id="musicBtn" aria-label="Toggle music" title="Music">
-      🎵
-    </button>
-  </header>
+  <!-- PARTICLE LAYER -->
+  <div id="particles" class="particles" aria-hidden="true"></div>
 
-  <main id="app" class="app" aria-live="polite"></main>
+  <!-- DOT NAVIGATION -->
+  <nav id="dotNav" class="dot-nav" aria-label="Chapter navigation">
+    <button class="dot-nav__dot active" data-chapter="0"></button>
+    <button class="dot-nav__dot" data-chapter="1"></button>
+    <button class="dot-nav__dot" data-chapter="2"></button>
+    <button class="dot-nav__dot" data-chapter="3"></button>
+    <button class="dot-nav__dot" data-chapter="4"></button>
+    <button class="dot-nav__dot" data-chapter="5"></button>
+    <button class="dot-nav__dot" data-chapter="6"></button>
+  </nav>
 
-  <footer class="footer">
-    <div class="footer__hint">Made with love + a little tech.</div>
-    <button class="paw" id="pawBtn" aria-label="Hidden paw" title="(psst)">
-      🐾
-    </button>
-  </footer>
+  <!-- CHAPTERS -->
+  <main id="chapters" class="chapters">
 
+    <!-- Ch 0: Elephant Hearts -->
+    <section id="ch0" class="chapter" data-chapter="0">
+      <div class="chapter__content">
+        <div class="chapter__emoji">🐘</div>
+        <div class="typewriter" id="tw0"></div>
+      </div>
+    </section>
+
+    <!-- Ch 1: The Sushi Bar (Interactive: fortune cookie) -->
+    <section id="ch1" class="chapter" data-chapter="1">
+      <div class="chapter__content">
+        <div class="chapter__emoji">🍣</div>
+        <div class="typewriter" id="tw1"></div>
+        <div id="soyInteraction" class="interaction hidden">
+          <div class="fortune-cookie" id="fortuneCookie">
+            <div class="fortune-cookie__inner">
+              <div class="fortune-cookie__front">
+                <div class="fortune-cookie__icon">🥠</div>
+                <div class="fortune-cookie__label">Tap the fortune cookie</div>
+              </div>
+              <div class="fortune-cookie__back">
+                <div class="fortune-cookie__reveal">I'm soy into you.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ch 2: Postcards From the Future (Interactive: flip cards) -->
+    <section id="ch2" class="chapter" data-chapter="2">
+      <div class="chapter__content">
+        <div class="chapter__emoji">✈️</div>
+        <div class="typewriter" id="tw2"></div>
+        <div id="postcardInteraction" class="interaction hidden">
+          <div class="postcards">
+            <div class="postcard" data-postcard="paris">
+              <div class="postcard__inner">
+                <div class="postcard__front">🗼 Paris</div>
+                <div class="postcard__back">You pretending you aren't cold. Me pretending I'm not lost. We still end up kissing at sunset.</div>
+              </div>
+            </div>
+            <div class="postcard" data-postcard="tokyo">
+              <div class="postcard__inner">
+                <div class="postcard__front">🗾 Tokyo</div>
+                <div class="postcard__back">Skincare aisle. You go full dermatologist mode. I'm just your proud little assistant.</div>
+              </div>
+            </div>
+            <div class="postcard" data-postcard="italy">
+              <div class="postcard__inner">
+                <div class="postcard__front">🍷 Italy</div>
+                <div class="postcard__back">Wine + pasta + your laugh. Our future dachshund somehow becomes a local celebrity.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ch 3: Date Night -->
+    <section id="ch3" class="chapter" data-chapter="3">
+      <div class="chapter__content">
+        <div class="chapter__emoji">🕯</div>
+        <div class="typewriter" id="tw3"></div>
+        <div class="candle-glow" id="candleGlow"></div>
+      </div>
+    </section>
+
+    <!-- Ch 4: Reasons I Love You (Interactive: tap counter) -->
+    <section id="ch4" class="chapter" data-chapter="4">
+      <div class="chapter__content">
+        <div class="chapter__emoji">💛</div>
+        <div class="typewriter" id="tw4"></div>
+        <div id="counterInteraction" class="interaction hidden">
+          <button class="counter-btn" id="counterBtn">
+            <span class="counter-btn__number" id="counterNumber">0</span>
+            <span class="counter-btn__label">Tap to count</span>
+          </button>
+          <div class="counter-reason" id="counterReason"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ch 5: The Love Letter -->
+    <section id="ch5" class="chapter" data-chapter="5">
+      <div class="chapter__content chapter__content--letter">
+        <div class="letter-text" id="letterText"></div>
+        <div id="willowReveal" class="willow-reveal hidden">
+          <img class="willow-img" src="assets/willow.png" alt="Our future dachshund" onerror="this.style.display='none'" />
+          <p class="willow-caption">"Hi Logan. I'm your future wiener dog. I run this household."</p>
+        </div>
+        <div id="chatSection" class="chat-section hidden">
+          <div class="chat" aria-live="polite">
+            <div class="chat__header">
+              Logan &harr; David
+              <span class="chat__status" id="chatStatus"></span>
+            </div>
+            <div class="chat__messages" id="chatMessages"></div>
+            <form class="chat__composer" id="chatForm">
+              <textarea
+                id="chatInput"
+                name="loganMessage"
+                placeholder="Type as Logan..."
+                rows="2"
+              ></textarea>
+              <button class="btn primary" type="submit" id="chatSendBtn">Send</button>
+            </form>
+            <div class="chat__hint">I'll keep the tone romantic + playful, just like us.</div>
+          </div>
+        </div>
+        <div id="hospitalBtnWrap" class="hospital-btn-wrap hidden">
+          <button class="hospital-btn" id="hospitalBtn">Enter the Hospital</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- HOSPITAL 3D CANVAS (hidden until Part 2) -->
+  <div id="hospitalOverlay" class="hospital-overlay hidden">
+    <canvas id="hospitalCanvas"></canvas>
+    <div id="hospitalUI" class="hospital-ui"></div>
+  </div>
+
+  <!-- AUDIO -->
   <audio id="bgm" preload="auto" loop>
-    <!-- Comes with a gentle synth pad. Swap files in assets/bg-music.* to change the vibe. -->
     <source src="assets/bg-music.m4a" type="audio/mp4" />
     <source src="assets/bg-music.mp3" type="audio/mpeg" />
     <source src="assets/bg-music.wav" type="audio/wav" />
   </audio>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="app.js"></script>
+  <script src="hospital.js"></script>
 </body>
 </html>

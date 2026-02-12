@@ -1,778 +1,448 @@
-/* Logan’s Little Valentine Journey — rebuilt as an open-world stroll.
-   Explore the neighborhood, bump into hotspots, and read each scene inline. */
+/* Logan's Cinematic Love Letter — app.js
+   Auto-playing chapters with typewriter text, 3 interactive moments, and AI chat. */
 
-const app = document.getElementById("app");
-const progressBar = document.getElementById("progressBar");
-const pawBtn = document.getElementById("pawBtn");
-const musicBtn = document.getElementById("musicBtn");
-const bgm = document.getElementById("bgm");
+(function () {
+  "use strict";
 
-const worldLocations = [
-  {
-    id: "elephant",
-    name: "Elephant Atrium",
-    emoji: "🐘",
-    x: 22,
-    y: 48,
-    memoryLine: "Elephant hearts remember every kindness.",
-    vibe: "Footprints glow between string lights.",
-  },
-  {
-    id: "sushi",
-    name: "Hidden Sushi Bar",
-    emoji: "🍣",
-    x: 48,
-    y: 32,
-    memoryLine: "We once invented a menu with exactly one item.",
-    vibe: "Neon reflections, soy-scented air, zero chill.",
-  },
-  {
-    id: "travel",
-    name: "Travel Loft",
-    emoji: "✈️",
-    x: 66,
-    y: 56,
-    memoryLine: "Postcards of futures where we’re laughing somewhere new.",
-    vibe: "Suitcases, postcards, and a dachshund passport agent.",
-  },
-  {
-    id: "date",
-    name: "Date-Night Studio",
-    emoji: "🕯",
-    x: 36,
-    y: 72,
-    memoryLine: "Cooking + wine + pottery = chaotic romance.",
-    vibe: "Pots spinning, wine poured, playlists looping.",
-  },
-  {
-    id: "starlight",
-    name: "Starlight Outlook",
-    emoji: "🌌",
-    x: 78,
-    y: 26,
-    memoryLine: "Every timeline ends with me choosing you.",
-    vibe: "City skyline, meteor streak, dachshund constellation.",
-  },
-];
+  // ============ DOM REFS ============
+  const curtain = document.getElementById("curtain");
+  const curtainBtn = document.getElementById("curtainBtn");
+  const particlesEl = document.getElementById("particles");
+  const dotNav = document.getElementById("dotNav");
+  const chapters = document.getElementById("chapters");
+  const bgm = document.getElementById("bgm");
 
-const baseVisited = worldLocations.reduce((acc, loc) => {
-  acc[loc.id] = false;
-  return acc;
-}, {});
+  // Chat
+  const chatMessages = document.getElementById("chatMessages");
+  const chatForm = document.getElementById("chatForm");
+  const chatInput = document.getElementById("chatInput");
+  const chatSendBtn = document.getElementById("chatSendBtn");
+  const chatStatus = document.getElementById("chatStatus");
+  const chatSection = document.getElementById("chatSection");
 
-const initialChatMessages = [
-  {
-    id: "assistant-intro",
-    role: "assistant",
-    text:
-      "Logan, it’s me. Wander the map, then ask me anything here. I’ll answer like it’s our own little telepathic date-night thread.",
-  },
-];
+  // Interactions
+  const fortuneCookie = document.getElementById("fortuneCookie");
+  const counterBtn = document.getElementById("counterBtn");
+  const counterNumber = document.getElementById("counterNumber");
+  const counterReason = document.getElementById("counterReason");
+  const hospitalBtn = document.getElementById("hospitalBtn");
+  const hospitalBtnWrap = document.getElementById("hospitalBtnWrap");
+  const willowReveal = document.getElementById("willowReveal");
+  const letterText = document.getElementById("letterText");
+  const candleGlow = document.getElementById("candleGlow");
 
-const state = {
-  player: { x: 52, y: 76 },
-  visited: { ...baseVisited },
-  hoveredLocation: null,
-  activeLocation: null,
-  memoryLog: [],
-  worldHint: null,
-  elephantSteps: [false, false, false],
-  sushiSelected: [],
-  travelSeen: { paris: false, tokyo: false, italy: false },
-  dateClicks: { cooking: false, wine: false, pottery: false },
-  pawClicks: 0,
-  musicOn: false,
-  chatMessages: [...initialChatMessages],
-  chatDraft: "",
-  chatLoading: false,
-};
-
-const MOVEMENT_STEP = 3.2;
-const NEAR_THRESHOLD = 12;
-
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
-}
-
-function distance(point, loc) {
-  const dx = point.x - loc.x;
-  const dy = point.y - loc.y;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-function safeAsset(path) {
-  return path || "";
-}
-
-function getLocationById(id) {
-  return worldLocations.find((loc) => loc.id === id);
-}
-
-function getVisitedCount() {
-  return Object.values(state.visited).filter(Boolean).length;
-}
-
-function defaultWorldMessage() {
-  const visitedCount = getVisitedCount();
-  if (!visitedCount) {
-    return "Use arrow keys or WASD to wander. When a spot glows, press Enter or tap it.";
-  }
-  if (visitedCount < worldLocations.length) {
-    return "Keep strolling—each glowing nook hides a different kind of us.";
-  }
-  return "Revisit any stop to hear it react to how many memories you’ve collected.";
-}
-
-function getWorldMessage() {
-  if (state.worldHint) return state.worldHint;
-  if (state.activeLocation) return "Stay awhile, then hit ← Back to keep roaming.";
-  if (state.hoveredLocation) {
-    const loc = getLocationById(state.hoveredLocation);
-    if (loc) return `You’re beside ${loc.name}. Press Enter or tap to slip inside.`;
-  }
-  return defaultWorldMessage();
-}
-
-function avatarBlock() {
-  return `
-    <div class="avatars" aria-label="Avatars">
-      <img class="avatar" src="${safeAsset("assets/david.jpg")}" alt="David" onerror="this.style.display='none'">
-      <img class="avatar" src="${safeAsset("assets/logan.jpg")}" alt="Logan" onerror="this.style.display='none'">
-    </div>
-  `;
-}
-
-function renderLocationHeading(title, subtitle, emoji) {
-  return `
-    <div class="panelHeading">
-      <div>
-        <h2 class="title">${emoji} ${title}</h2>
-        <p class="subtitle">${subtitle}</p>
-      </div>
-      ${avatarBlock()}
-    </div>
-  `;
-}
-
-const locationPanels = {
-  elephant: () => {
-    const lines = [
-      "Elephant hearts, elephant memory, elephant-level loyalty.",
-      "You’re soft and steady and somehow still ridiculous about everything.",
-      "I’m not letting go. Ever.",
-    ];
-    const revealedCount = state.elephantSteps.filter(Boolean).length;
-
-    return `
-      ${renderLocationHeading("Elephant Atrium", "Tap each glowing footprint to reveal a secret.", "🐘")}
-      <div class="note">${getLocationById("elephant").vibe}</div>
-      <div class="footprints">
-        ${[0, 1, 2]
-          .map(
-            (i) => `
-              <div class="foot ${state.elephantSteps[i] ? "done" : ""}" data-foot="${i}">
-                ${state.elephantSteps[i] ? "✨" : "🐾"}<br/>
-                ${state.elephantSteps[i] ? "Revealed" : "Footprint"}
-              </div>
-            `
-          )
-          .join("")}
-      </div>
-      <div class="note" id="elephantNote">
-        ${state.elephantSteps
-          .map((v, i) => (v ? `• ${lines[i]}` : ""))
-          .filter(Boolean)
-          .join("<br/>") || "Tap each print to hear me gush."}
-      </div>
-      ${revealedCount === 3
-        ? `<div class="note">A tiny dachshund apparition appears, approves of us, and demands snacks.</div>`
-        : ""}
-    `;
-  },
-
-  sushi: () => {
-    const menu = [
-      { id: "spicy1", label: "Spicy Tuna Roll", desc: "Classic. Dangerous. Iconic." },
-      { id: "spicy2", label: "Spicy Tuna Roll", desc: "Same roll, but emotionally supportive." },
-      { id: "spicy3", label: "Spicy Tuna Roll", desc: "Spicy tuna roll… with ✨vibes✨." },
-      { id: "spicy4", label: "Spicy Tuna Roll", desc: "The chef said: ‘trust me’ (it’s spicy tuna roll)." },
-      { id: "spicy5", label: "Spicy Tuna Roll", desc: "In a different font. Still spicy tuna roll." },
-    ];
-    const slots = [0, 1, 2]
-      .map((i) => (state.sushiSelected[i] ? "🍣 Spicy Tuna Roll" : "Pick one"))
-      .map((t, idx) => {
-        const filled = state.sushiSelected[idx] ? "filled" : "";
-        return `<div class="slot ${filled}">${t}</div>`;
-      })
-      .join("");
-    const done = state.sushiSelected.length >= 3;
-
-    return `
-      ${renderLocationHeading("Hidden Sushi Bar", "Assemble three rolls. Spoiler: they’re the same roll.", "🍣")}
-      <div class="note">${getLocationById("sushi").vibe}</div>
-      <div class="sushiSlots">${slots}</div>
-      <div class="grid3" style="margin-top: 10px;">
-        ${menu
-          .map(
-            (item) => `
-              <div class="tile" data-sushi="${item.id}">
-                <div class="tile__title">${item.label}</div>
-                <p class="tile__desc">${item.desc}</p>
-              </div>
-            `
-          )
-          .join("")}
-      </div>
-      <div class="row">
-        <button class="btn warn" data-sushi-reset>Reset order</button>
-        <button class="btn ${done ? "good" : ""}" ${done ? "" : "disabled"} data-sushi-finish>
-          ${done ? "Place Order" : "Place Order (pick 3)"}
-        </button>
-      </div>
-      ${done
-        ? `<div class="note">
-            “Logan, I’d eat a million spicy tuna rolls if it meant hearing you laugh across the table.”<br/><br/>
-            <button class="btn" data-soy-joke>Press for soy joke</button>
-            <span id="soyOut"></span>
-          </div>`
-        : ""}
-    `;
-  },
-
-  travel: () => {
-    const seenCount = Object.values(state.travelSeen).filter(Boolean).length;
-    return `
-      ${renderLocationHeading("Travel Loft", "Flip any postcard and pocket the future.", "✈️")}
-      <div class="note">${getLocationById("travel").vibe}</div>
-      <div class="row" style="flex-wrap: wrap;">
-        <button class="btn primary" data-postcard="paris">🗼 Paris</button>
-        <button class="btn primary" data-postcard="tokyo">🗾 Tokyo</button>
-        <button class="btn primary" data-postcard="italy">🍷 Italy</button>
-      </div>
-      <div class="note" id="postcardOut">${seenCount ? "Tap another postcard." : "Pick a postcard."}</div>
-    `;
-  },
-
-  date: () => {
-    const mk = (k, emoji, label) => `
-      <button class="btn ${state.dateClicks[k] ? "good" : "primary"}" data-date="${k}">
-        ${emoji} ${label} ${state.dateClicks[k] ? "✓" : ""}
-      </button>
-    `;
-    const all = Object.values(state.dateClicks).every(Boolean);
-    return `
-      ${renderLocationHeading("Date-Night Studio", "Toggle every station to craft tonight’s vibe.", "🕯")}
-      <div class="note">${getLocationById("date").vibe}</div>
-      <div class="row" style="flex-wrap: wrap;">
-        ${mk("cooking", "🍝", "Cooking")}
-        ${mk("wine", "🍷", "Wine")}
-        ${mk("pottery", "🏺", "Pottery")}
-      </div>
-      <div class="note" id="dateOut">
-        ${all
-          ? "Unlocked: cozy night secured. Wander to Starlight Outlook whenever you’re ready for the finale."
-          : "It’s giving ‘cozy, romantic, and you laughing at me for taking recipes too seriously.’"}
-      </div>
-    `;
-  },
-
-  starlight: () => {
-    const visitedCount = getVisitedCount();
-    return `
-      ${renderLocationHeading("Starlight Outlook", "The skyline listens while I gush about you.", "🌌")}
-      <div class="note">${getLocationById("starlight").vibe}</div>
-      <div class="note">
-        You’ve touched ${visitedCount}/${worldLocations.length} neon memories tonight.
-        <br/>No quests. No checklists. Just us orbiting the same feeling.
-      </div>
-      <div class="note">
-        You’re my favorite place to be.
-        <br/>My favorite laugh.
-        <br/>My favorite future.
-      </div>
-      <div class="note">
-        Love,
-        <br/><strong>David</strong>
-      </div>
-      <div class="row">
-        <button class="btn warn" data-find-willow>Summon the dachshund 🐾</button>
-      </div>
-    `;
-  },
-};
-
-function setProgress() {
-  const count = getVisitedCount();
-  const percent = (count / worldLocations.length) * 100;
-  progressBar.style.width = `${clamp(percent, 0, 100)}%`;
-}
-
-function renderWorld() {
-  return `
-    <section class="world">
-      <div class="world__map" aria-label="Virginia-Highland dream map">
-        <div class="world__glow"></div>
-        ${worldLocations
-          .map((loc) => {
-            const visited = state.visited[loc.id];
-            const near = state.hoveredLocation === loc.id;
-            return `
-              <button class="world__spot ${visited ? "world__spot--visited" : ""} ${
-              near ? "world__spot--near" : ""
-            }" style="left:${loc.x}%; top:${loc.y}%" data-location="${loc.id}">
-                <span class="world__spotIcon">${loc.emoji}</span>
-                <span class="world__spotLabel">${loc.name}</span>
-              </button>
-            `;
-          })
-          .join("")}
-        <div class="world__player" style="left:${state.player.x}%; top:${state.player.y}%" aria-label="David exploring">
-          <span>💛</span>
-        </div>
-      </div>
-      <aside class="world__panel">
-        ${renderWorldPanel()}
-      </aside>
-    </section>
-  `;
-}
-
-function renderWorldPanel() {
-  if (!state.activeLocation) {
-    return `
-      <div class="panelIntro">
-        <div class="panelIntro__top">
-          <div>
-            <h2 class="title">Virginia-Highland Nights</h2>
-            <p class="subtitle" id="worldMessage">${getWorldMessage()}</p>
-          </div>
-          ${avatarBlock()}
-        </div>
-        <div class="panelStats">
-          <div>
-            <div class="panelStats__value">${getVisitedCount()}</div>
-            <div class="panelStats__label">Spots explored</div>
-          </div>
-          <div>
-            <div class="panelStats__value">${Math.round(clamp((getVisitedCount() / worldLocations.length) * 100, 0, 100))}%</div>
-            <div class="panelStats__label">Map glow</div>
-          </div>
-        </div>
-        <div class="memoryList">
-          <div class="memoryList__title">Collected Moments</div>
-          ${renderMemoryLog()}
-        </div>
-        ${renderChatPanel()}
-      </div>
-    `;
-  }
-
-  const renderer = locationPanels[state.activeLocation];
-  return `
-    <div class="panelActive">
-      <div class="panelActive__header">
-        <button class="iconbtn panelClose" data-close-panel>← Back to the neighborhood</button>
-      </div>
-      ${renderer ? renderer() : `<p class="subtitle">Lost in thought…</p>`}
-    </div>
-  `;
-}
-
-function renderMemoryLog() {
-  if (!state.memoryLog.length) {
-    return `<div class="memoryList__empty">Memories you uncover will stack here.</div>`;
-  }
-  return state.memoryLog
-    .map(
-      (entry) => `
-        <div class="memoryList__item">
-          <div class="memoryList__emoji">${entry.emoji}</div>
-          <div>
-            <div class="memoryList__name">${entry.title}</div>
-            <div class="memoryList__line">${entry.line}</div>
-          </div>
-        </div>
-      `
-    )
-    .join("");
-}
-
-function renderChatPanel() {
-  const messageList = state.chatMessages
-    .map((msg) => renderChatBubble(msg))
-    .join("") || `<div class="chat__empty">No messages yet.</div>`;
-
-  return `
-    <div class="chat" aria-live="polite">
-      <div class="chat__header">
-        Logan ↔ David
-        <span class="chat__status">${state.chatLoading ? "typing…" : ""}</span>
-      </div>
-      <div class="chat__messages" id="chatMessages">${messageList}</div>
-      <form class="chat__composer" data-chat-form>
-        <textarea
-          name="loganMessage"
-          placeholder="Type as Logan…"
-          rows="2"
-          ${state.chatLoading ? "disabled" : ""}
-        >${state.chatDraft}</textarea>
-        <button class="btn primary" type="submit" ${state.chatLoading ? "disabled" : ""}>
-          ${state.chatLoading ? "Sending" : "Send"}
-        </button>
-      </form>
-      <div class="chat__hint">
-        I’ll keep the tone romantic + playful, just like us.
-      </div>
-    </div>
-  `;
-}
-
-function renderChatBubble(msg) {
-  const isAssistant = msg.role === "assistant";
-  const speaker = isAssistant ? "David" : "Logan";
-  return `
-    <div class="chat__bubble ${isAssistant ? "chat__bubble--assistant" : "chat__bubble--logan"}">
-      <div class="chat__bubbleLabel">${speaker}</div>
-      <div>${msg.text}</div>
-    </div>
-  `;
-}
-
-function bindChat() {
-  const form = document.querySelector("[data-chat-form]");
-  if (!form) return;
-  const textarea = form.querySelector("textarea");
-  if (textarea) {
-    textarea.value = state.chatDraft;
-    textarea.addEventListener("input", (event) => {
-      state.chatDraft = event.target.value;
-    });
-  }
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    if (state.chatLoading) return;
-    const value = (textarea?.value || "").trim();
-    if (!value) return;
-    sendChatMessage(value);
-  });
-  scrollChatToBottom();
-}
-
-function scrollChatToBottom() {
-  requestAnimationFrame(() => {
-    const box = document.getElementById("chatMessages");
-    if (box) box.scrollTop = box.scrollHeight;
-  });
-}
-
-async function sendChatMessage(message) {
-  const clientMsg = createChatMessage("user", message);
-  state.chatMessages.push(clientMsg);
-  state.chatDraft = "";
-  state.chatLoading = true;
-  trimChatMessages();
-  render();
-
-  try {
-    const payload = {
-      prompt: message,
-      history: getChatHistoryPayload(),
-    };
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) throw new Error("Failed to reach AI service");
-    const data = await response.json();
-    const reply = data.reply?.trim() || "I’m lost in thought—try that again?";
-    state.chatMessages.push(createChatMessage("assistant", reply));
-  } catch (error) {
-    state.chatMessages.push(
-      createChatMessage(
-        "assistant",
-        "I want to answer, but the AI connection hiccuped. Give me a second and try again?"
-      )
-    );
-  } finally {
-    state.chatLoading = false;
-    trimChatMessages();
-    render();
-  }
-}
-
-function getChatHistoryPayload() {
-  return state.chatMessages.slice(-8).map((msg) => ({ role: msg.role, text: msg.text }));
-}
-
-function createChatMessage(role, text) {
-  return { id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, role, text };
-}
-
-function trimChatMessages() {
-  const max = 12;
-  if (state.chatMessages.length > max) {
-    state.chatMessages = state.chatMessages.slice(-max);
-  }
-}
-
-function render() {
-  updateNearbyLocation();
-  setProgress();
-  app.innerHTML = renderWorld();
-  bindSceneHandlers();
-}
-
-function updateNearbyLocation() {
-  let selected = null;
-  let bestDistance = Infinity;
-  worldLocations.forEach((loc) => {
-    const d = distance(state.player, loc);
-    if (d < NEAR_THRESHOLD && d < bestDistance) {
-      bestDistance = d;
-      selected = loc.id;
-    }
-  });
-  state.hoveredLocation = selected;
-  if (!selected && !state.activeLocation) {
-    state.worldHint = null;
-  }
-}
-
-function addMemory(id) {
-  const loc = getLocationById(id);
-  if (!loc) return;
-  if (state.memoryLog.some((entry) => entry.id === id)) return;
-  state.memoryLog.unshift({ id, title: loc.name, line: loc.memoryLine, emoji: loc.emoji });
-  state.memoryLog = state.memoryLog.slice(0, 6);
-}
-
-function attemptEnterLocation(id) {
-  if (!id) return;
-  if (state.hoveredLocation !== id) {
-    const loc = getLocationById(id);
-    state.worldHint = loc ? `Walk a little closer to ${loc.name}.` : "Walk closer.";
-    render();
-    return;
-  }
-  enterLocation(id);
-}
-
-function enterLocation(id) {
-  state.activeLocation = id;
-  state.worldHint = null;
-  if (!state.visited[id]) {
-    state.visited[id] = true;
-    addMemory(id);
-  }
-  render();
-}
-
-function exitLocation() {
-  state.activeLocation = null;
-  state.worldHint = null;
-  render();
-}
-
-function movePlayer(dx, dy) {
-  state.player.x = clamp(state.player.x + dx, 6, 94);
-  state.player.y = clamp(state.player.y + dy, 8, 92);
-  if (!state.activeLocation) {
-    state.worldHint = null;
-  }
-  render();
-}
-
-function bindSceneHandlers() {
-  document.querySelectorAll("[data-location]").forEach((el) => {
-    el.addEventListener("click", () => attemptEnterLocation(el.getAttribute("data-location")));
-  });
-
-  const closeBtn = document.querySelector("[data-close-panel]");
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => exitLocation());
-  }
-
-  bindLocationInteractions();
-
-  document.querySelectorAll("[data-find-willow]").forEach((btn) => {
-    btn.addEventListener("click", () => openDogModal());
-  });
-
-  bindChat();
-}
-
-function bindLocationInteractions() {
-  if (state.activeLocation === "elephant") bindElephant();
-  if (state.activeLocation === "sushi") bindSushi();
-  if (state.activeLocation === "travel") bindTravel();
-  if (state.activeLocation === "date") bindDate();
-}
-
-function bindElephant() {
-  document.querySelectorAll("[data-foot]").forEach((el) => {
-    el.addEventListener("click", () => {
-      const idx = Number(el.getAttribute("data-foot"));
-      state.elephantSteps[idx] = true;
-      render();
-    });
-  });
-}
-
-function bindSushi() {
-  document.querySelectorAll("[data-sushi]").forEach((el) => {
-    el.addEventListener("click", () => {
-      if (state.sushiSelected.length >= 3) return;
-      state.sushiSelected.push(el.getAttribute("data-sushi"));
-      render();
-    });
-  });
-
-  const resetBtn = document.querySelector("[data-sushi-reset]");
-  if (resetBtn) {
-    resetBtn.addEventListener("click", () => {
-      state.sushiSelected = [];
-      render();
-    });
-  }
-
-  const finishBtn = document.querySelector("[data-sushi-finish]");
-  if (finishBtn) {
-    finishBtn.addEventListener("click", () => {
-      // no-op; just keep shimmering.
-    });
-  }
-
-  const soyBtn = document.querySelector("[data-soy-joke]");
-  if (soyBtn) {
-    soyBtn.addEventListener("click", () => {
-      const out = document.getElementById("soyOut");
-      if (out) out.innerHTML = `<br/><br/><strong>David:</strong> I’m soy into you.`;
-      soyBtn.disabled = true;
-      soyBtn.textContent = "Soy joke delivered ✅";
-    });
-  }
-}
-
-function bindTravel() {
-  document.querySelectorAll("[data-postcard]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const key = btn.getAttribute("data-postcard");
-      state.travelSeen[key] = true;
-      const out = document.getElementById("postcardOut");
-      if (!out) return;
-      const copy = {
-        paris: "Paris: you pretending you aren’t cold; me pretending I’m not lost. We still end up kissing at sunset.",
-        tokyo: "Tokyo: skincare aisle. You go full dermatologist mode and I’m just your proud little assistant.",
-        italy: "Italy: wine + pasta + your laugh. Our future dachshund somehow becomes a local celebrity.",
-      }[key];
-      out.innerHTML = `✨ <strong>${copy}</strong>`;
-    });
-  });
-}
-
-function bindDate() {
-  document.querySelectorAll("[data-date]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const key = btn.getAttribute("data-date");
-      state.dateClicks[key] = true;
-      render();
-    });
-  });
-}
-
-document.addEventListener("keydown", (event) => {
-  const key = event.key.toLowerCase();
-  if (key === "escape" && state.activeLocation) {
-    event.preventDefault();
-    exitLocation();
-    return;
-  }
-
-  const movementMap = {
-    arrowup: { dx: 0, dy: -MOVEMENT_STEP },
-    w: { dx: 0, dy: -MOVEMENT_STEP },
-    arrowdown: { dx: 0, dy: MOVEMENT_STEP },
-    s: { dx: 0, dy: MOVEMENT_STEP },
-    arrowleft: { dx: -MOVEMENT_STEP, dy: 0 },
-    a: { dx: -MOVEMENT_STEP, dy: 0 },
-    arrowright: { dx: MOVEMENT_STEP, dy: 0 },
-    d: { dx: MOVEMENT_STEP, dy: 0 },
+  // ============ STATE ============
+  const state = {
+    currentChapter: 0,
+    musicStarted: false,
+    showRunning: false,
+    soyFlipped: false,
+    postcardsFlipped: { paris: false, tokyo: false, italy: false },
+    counterCount: 0,
+    chatMessages: [
+      { role: "assistant", text: "Logan, ask me anything. I'll answer like it's our own little telepathic date-night thread." },
+    ],
+    chatLoading: false,
   };
 
-  if (movementMap[key]) {
-    event.preventDefault();
-    if (state.activeLocation) return;
-    movePlayer(movementMap[key].dx, movementMap[key].dy);
-    return;
+  const TOTAL_CHAPTERS = 6; // indices 0-5
+
+  // ============ CHAPTER CONFIG ============
+  const chapterConfig = [
+    {
+      // Ch 0: Elephant Hearts
+      lines: [
+        "Elephant hearts remember every kindness.",
+        "You're soft and steady",
+        "and somehow still ridiculous about everything.",
+        "I'm not letting go. Ever.",
+      ],
+      autoAdvanceDelay: 3000,
+    },
+    {
+      // Ch 1: Sushi Bar (interactive)
+      lines: [
+        "We once invented a sushi menu with exactly one item.",
+        "Spoiler: it was spicy tuna roll. Every time.",
+      ],
+      interactive: true,
+    },
+    {
+      // Ch 2: Postcards (interactive)
+      lines: [
+        "Postcards from the future — where we're laughing somewhere new.",
+        "Flip a card. Pocket the daydream.",
+      ],
+      interactive: true,
+    },
+    {
+      // Ch 3: Date Night
+      lines: [
+        "Cooking + wine + pottery = chaotic romance.",
+        "It's giving cozy, romantic,",
+        "and you laughing at me for taking recipes too seriously.",
+      ],
+      autoAdvanceDelay: 3000,
+      candleGlow: true,
+    },
+    {
+      // Ch 4: Reasons I Love You (interactive)
+      lines: [
+        "I started counting reasons I love you.",
+        "I stopped because I ran out of numbers, not reasons.",
+      ],
+      interactive: true,
+    },
+    {
+      // Ch 5: The Love Letter (final)
+      letterMode: true,
+    },
+  ];
+
+  const loveReasons = [
+    "The way you laugh at your own jokes before you finish telling them.",
+    "Your ridiculous dedication to skincare — and making me do it too.",
+    "How you make every room warmer just by walking in.",
+    "The look you give me when you think I'm not watching.",
+    "You turned 'spicy tuna roll' into a love language.",
+    "Your patience with my overthinking.",
+    "The way you say my name.",
+    "You chose me. Every day, you keep choosing me.",
+  ];
+
+  // ============ TYPEWRITER ENGINE ============
+  function typewriteLine(el, text, speed = 40) {
+    return new Promise((resolve) => {
+      let i = 0;
+      const cursor = document.createElement("span");
+      cursor.className = "cursor";
+      el.appendChild(cursor);
+
+      function tick() {
+        if (i < text.length) {
+          cursor.before(document.createTextNode(text[i]));
+          i++;
+          setTimeout(tick, speed);
+        } else {
+          setTimeout(() => {
+            cursor.remove();
+            resolve();
+          }, 400);
+        }
+      }
+      tick();
+    });
   }
 
-  if (key === "enter" && !state.activeLocation && state.hoveredLocation) {
-    event.preventDefault();
-    attemptEnterLocation(state.hoveredLocation);
+  async function typewriteLines(el, lines, speed = 40, pauseBetween = 600) {
+    for (let i = 0; i < lines.length; i++) {
+      if (i > 0) {
+        el.appendChild(document.createElement("br"));
+        await pause(pauseBetween);
+      }
+      await typewriteLine(el, lines[i], speed);
+    }
   }
-});
 
-pawBtn.addEventListener("click", () => {
-  state.pawClicks += 1;
-  if (state.pawClicks >= 5) {
-    state.pawClicks = 0;
-    openDogModal();
+  function pause(ms) {
+    return new Promise((r) => setTimeout(r, ms));
   }
-});
 
-musicBtn.addEventListener("click", async () => {
-  state.musicOn = !state.musicOn;
-  if (state.musicOn) {
+  // ============ PARTICLES ============
+  let particleInterval = null;
+  function startParticles() {
+    if (particleInterval) return;
+    spawnParticle();
+    particleInterval = setInterval(spawnParticle, 800);
+  }
+  function stopParticles() {
+    if (particleInterval) {
+      clearInterval(particleInterval);
+      particleInterval = null;
+    }
+  }
+  function spawnParticle() {
+    const hearts = ["\u2764\uFE0F", "\uD83D\uDC9B", "\uD83D\uDC96", "\uD83E\uDE77", "\u2728"];
+    const p = document.createElement("div");
+    p.className = "particle";
+    p.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+    p.style.left = Math.random() * 100 + "vw";
+    p.style.bottom = "-30px";
+    p.style.fontSize = (14 + Math.random() * 14) + "px";
+    p.style.animationDuration = (4 + Math.random() * 4) + "s";
+    particlesEl.appendChild(p);
+    p.addEventListener("animationend", () => p.remove());
+  }
+
+  // ============ DOT NAV ============
+  function updateDotNav(idx) {
+    const dots = dotNav.querySelectorAll(".dot-nav__dot");
+    dots.forEach((dot, i) => {
+      dot.classList.toggle("active", i === idx);
+      if (i < idx) dot.classList.add("visited");
+    });
+  }
+
+  // Dot click → scroll to chapter
+  dotNav.addEventListener("click", (e) => {
+    const dot = e.target.closest(".dot-nav__dot");
+    if (!dot) return;
+    const idx = Number(dot.dataset.chapter);
+    if (isNaN(idx)) return;
+    const section = document.getElementById("ch" + idx);
+    if (section) section.scrollIntoView({ behavior: "smooth" });
+  });
+
+  // ============ INTERSECTION OBSERVER ============
+  function setupObserver() {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const idx = Number(entry.target.dataset.chapter);
+            entry.target.classList.add("active");
+            if (!isNaN(idx)) updateDotNav(idx);
+          }
+        });
+      },
+      { threshold: 0.4 }
+    );
+    document.querySelectorAll(".chapter").forEach((ch) => observer.observe(ch));
+  }
+
+  // ============ CHAPTER SEQUENCER ============
+  async function runShow() {
+    state.showRunning = true;
+    chapters.classList.add("visible");
+    dotNav.classList.add("visible");
+    startParticles();
+
+    for (let i = 0; i < TOTAL_CHAPTERS; i++) {
+      state.currentChapter = i;
+      const section = document.getElementById("ch" + i);
+      const config = chapterConfig[i];
+
+      // Scroll into view
+      section.scrollIntoView({ behavior: "smooth" });
+      await pause(600);
+      section.classList.add("active");
+      updateDotNav(i);
+
+      if (config.letterMode) {
+        await runLetterChapter();
+        break; // final chapter, no more advancing
+      }
+
+      // Candle glow effect
+      if (config.candleGlow) candleGlow.classList.add("active");
+      else candleGlow.classList.remove("active");
+
+      // Typewriter
+      const tw = document.getElementById("tw" + i);
+      if (tw && config.lines) {
+        await typewriteLines(tw, config.lines);
+      }
+
+      if (config.interactive) {
+        // Show interaction, wait for user
+        await showInteraction(i);
+      } else {
+        // Auto-advance
+        await pause(config.autoAdvanceDelay || 2000);
+      }
+    }
+  }
+
+  function showInteraction(chapterIdx) {
+    return new Promise((resolve) => {
+      if (chapterIdx === 1) {
+        // Soy joke
+        const el = document.getElementById("soyInteraction");
+        el.classList.remove("hidden");
+        const handler = () => {
+          if (state.soyFlipped) return;
+          state.soyFlipped = true;
+          fortuneCookie.classList.add("flipped");
+          setTimeout(resolve, 2500);
+        };
+        fortuneCookie.addEventListener("click", handler, { once: true });
+      } else if (chapterIdx === 2) {
+        // Postcards
+        const el = document.getElementById("postcardInteraction");
+        el.classList.remove("hidden");
+        let flipped = 0;
+        document.querySelectorAll(".postcard").forEach((card) => {
+          card.addEventListener("click", () => {
+            const key = card.dataset.postcard;
+            if (state.postcardsFlipped[key]) return;
+            state.postcardsFlipped[key] = true;
+            card.classList.add("flipped");
+            flipped++;
+            if (flipped >= 3) setTimeout(resolve, 2000);
+          });
+        });
+      } else if (chapterIdx === 4) {
+        // Counter
+        const el = document.getElementById("counterInteraction");
+        el.classList.remove("hidden");
+        const handler = () => {
+          if (state.counterCount >= loveReasons.length) {
+            setTimeout(resolve, 2000);
+            return;
+          }
+          state.counterCount++;
+          counterNumber.textContent = state.counterCount;
+          counterReason.textContent = loveReasons[state.counterCount - 1];
+          counterBtn.classList.remove("bounce");
+          void counterBtn.offsetWidth; // trigger reflow
+          counterBtn.classList.add("bounce");
+          if (state.counterCount >= loveReasons.length) {
+            counterBtn.querySelector(".counter-btn__label").textContent = "All found";
+            setTimeout(resolve, 2500);
+          }
+        };
+        counterBtn.addEventListener("click", handler);
+      }
+    });
+  }
+
+  async function runLetterChapter() {
+    candleGlow.classList.remove("active");
+
+    const lines = [
+      "You're my favorite place to be.",
+      "My favorite laugh.",
+      "My favorite future.",
+      "",
+      "Love,",
+      "<strong>David</strong>",
+    ];
+
+    for (let i = 0; i < lines.length; i++) {
+      await pause(800);
+      const line = lines[i];
+      if (line === "") {
+        letterText.appendChild(document.createElement("br"));
+      } else {
+        const p = document.createElement("div");
+        p.innerHTML = line;
+        p.style.opacity = "0";
+        p.style.transform = "translateY(10px)";
+        p.style.transition = "opacity 0.6s ease, transform 0.6s ease";
+        letterText.appendChild(p);
+        await pause(50);
+        p.style.opacity = "1";
+        p.style.transform = "translateY(0)";
+      }
+    }
+
+    // Willow reveal
+    await pause(1500);
+    willowReveal.classList.remove("hidden");
+
+    // Chat
+    await pause(1500);
+    chatSection.classList.remove("hidden");
+    renderChat();
+
+    // Hospital button
+    await pause(1000);
+    hospitalBtnWrap.classList.remove("hidden");
+  }
+
+  // ============ CHAT ============
+  function renderChat() {
+    chatMessages.innerHTML = state.chatMessages
+      .map((msg) => {
+        const isAI = msg.role === "assistant";
+        return `<div class="chat__bubble ${isAI ? "chat__bubble--assistant" : "chat__bubble--logan"}">
+          <div class="chat__bubbleLabel">${isAI ? "David" : "Logan"}</div>
+          <div>${msg.text}</div>
+        </div>`;
+      })
+      .join("");
+    requestAnimationFrame(() => {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+  }
+
+  chatForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (state.chatLoading) return;
+    const text = chatInput.value.trim();
+    if (!text) return;
+    sendChat(text);
+  });
+
+  async function sendChat(message) {
+    state.chatMessages.push({ role: "user", text: message });
+    chatInput.value = "";
+    state.chatLoading = true;
+    chatSendBtn.disabled = true;
+    chatInput.disabled = true;
+    chatStatus.textContent = "typing\u2026";
+    if (state.chatMessages.length > 12) state.chatMessages = state.chatMessages.slice(-12);
+    renderChat();
+
+    try {
+      const payload = {
+        prompt: message,
+        history: state.chatMessages.slice(-8).map((m) => ({ role: m.role, text: m.text })),
+      };
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      state.chatMessages.push({ role: "assistant", text: data.reply || "I'm lost in thought." });
+    } catch {
+      state.chatMessages.push({ role: "assistant", text: "The AI hiccuped. Try again in a sec?" });
+    } finally {
+      state.chatLoading = false;
+      chatSendBtn.disabled = false;
+      chatInput.disabled = false;
+      chatStatus.textContent = "";
+      if (state.chatMessages.length > 12) state.chatMessages = state.chatMessages.slice(-12);
+      renderChat();
+    }
+  }
+
+  // ============ HOSPITAL LAUNCH ============
+  hospitalBtn.addEventListener("click", () => {
+    if (typeof window.launchHospital === "function") {
+      window.launchHospital();
+    }
+  });
+
+  // Called from hospital.js when exiting
+  window.returnFromHospital = function () {
+    const overlay = document.getElementById("hospitalOverlay");
+    overlay.classList.add("hidden");
+    const ch5 = document.getElementById("ch5");
+    if (ch5) ch5.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // ============ CURTAIN ============
+  curtainBtn.addEventListener("click", async () => {
+    // Unlock audio
     try {
       bgm.volume = 0.22;
       await bgm.play();
-      musicBtn.textContent = "🔊";
+      state.musicStarted = true;
     } catch {
-      state.musicOn = false;
-      musicBtn.textContent = "🎵";
-      alert("Add assets/bg-music.(mp3/m4a/wav) if you want music 🎵");
+      // no audio file — that's fine
     }
-  } else {
-    bgm.pause();
-    musicBtn.textContent = "🎵";
-  }
-});
 
-function openDogModal() {
-  const overlay = document.createElement("div");
-  overlay.className = "modalOverlay";
-  overlay.innerHTML = `
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Future dachshund message">
-      <div class="modal__top">
-        <div><strong>Future Dachshund Preview</strong></div>
-        <button class="iconbtn" data-close>✕</button>
-      </div>
-      <div class="modal__body">
-        <div class="willowRow">
-          <img class="willowImg" src="assets/willow.png" alt="Future dachshund" onerror="this.style.display='none'">
-          <div>
-            <div class="badge">🐶 A dog that doesn’t exist yet</div>
-            <div style="margin-top:10px; line-height:1.5; color: rgba(255,255,255,0.85);">
-              “Hi Logan. I’m your future wiener dog.”
-              <br/>“I run this household.”
-              <br/>“I accept payment in spicy tuna rolls.”
-            </div>
-          </div>
-        </div>
-        <div class="row">
-          <button class="btn good" data-close>Ok ✅</button>
-        </div>
-      </div>
-    </div>
-  `;
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) overlay.remove();
+    curtain.classList.add("fade-out");
+    await pause(1000);
+    curtain.style.display = "none";
+
+    // Start the show
+    runShow();
   });
-  overlay.querySelectorAll("[data-close]").forEach((btn) =>
-    btn.addEventListener("click", () => overlay.remove())
-  );
-  document.body.appendChild(overlay);
-}
 
-render();
+  // ============ INIT ============
+  setupObserver();
+})();
