@@ -348,49 +348,160 @@ body {
   color: var(--text);
 }
 
-/* ---- Counter (Love Reasons) ---- */
-.counter-btn {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,196,0,0.4);
-  background: linear-gradient(135deg, rgba(255,196,0,0.15), rgba(255,105,180,0.1));
-  cursor: pointer;
+/* ---- CAPTCHA Widget ---- */
+.captcha-widget {
+  width: 320px;
+  background: #fff;
+  border: 1px solid #d3d3d3;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  overflow: hidden;
+  font-family: sans-serif;
+  color: #333;
+}
+.captcha-widget__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #f9f9f9;
+  border-bottom: 1px solid #e0e0e0;
+}
+.captcha-widget__check-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.captcha-widget__checkbox {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #c1c1c1;
+  border-radius: 2px;
+  background: #fff;
   display: grid;
   place-items: center;
-  transition: transform 200ms ease, box-shadow 200ms ease;
-  color: var(--text);
+  transition: background 200ms, border-color 200ms;
 }
-.counter-btn:active {
-  transform: scale(0.92);
+.captcha-widget__checkbox.checked {
+  background: #4a90d9;
+  border-color: #4a90d9;
 }
-.counter-btn.bounce {
-  animation: counterBounce 0.4s ease;
-}
-@keyframes counterBounce {
-  0% { transform: scale(1); }
-  30% { transform: scale(1.2); }
-  60% { transform: scale(0.95); }
-  100% { transform: scale(1); }
-}
-.counter-btn__number {
-  font-size: 42px;
-  font-weight: 800;
-  color: var(--accent);
-  display: block;
-}
-.counter-btn__label {
-  font-size: 11px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-.counter-reason {
+.captcha-widget__checkbox.checked::after {
+  content: "✓";
+  color: #fff;
   font-size: 18px;
+  font-weight: 700;
+}
+.captcha-widget__header-text {
+  font-size: 14px;
+  color: #333;
+}
+.captcha-widget__brand {
+  text-align: right;
+}
+.captcha-widget__brand-logo {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a90d9;
+  letter-spacing: 0.5px;
+}
+.captcha-widget__brand-sub {
+  font-size: 9px;
+  color: #aaa;
+}
+.captcha-challenge__bar {
+  background: #4a90d9;
+  padding: 8px 12px;
+}
+.captcha-challenge__title {
+  font-size: 12px;
+  color: #fff;
+  font-weight: 600;
+}
+.captcha-challenge__prompt {
+  font-size: 13px;
+  padding: 8px 12px 6px;
+  color: #333;
+  background: #f0f0f0;
+  border-bottom: 1px solid #ddd;
+}
+.captcha-hint {
+  font-style: italic;
+  color: #999;
+  font-size: 11px;
+}
+.captcha-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  padding: 3px;
+  background: #888;
+}
+.captcha-tile {
+  aspect-ratio: 1;
+  background-image: var(--tile-image);
+  background-size: 300% 300%;
+  background-position: var(--tile-pos);
+  cursor: pointer;
+  position: relative;
+  transition: opacity 150ms;
+}
+.captcha-tile:hover {
+  opacity: 0.85;
+}
+.captcha-tile.selected::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  background: rgba(74, 144, 217, 0.55);
+  color: #fff;
+  font-size: 28px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.captcha-reason {
+  min-height: 2.4em;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-style: italic;
+  color: #444;
   line-height: 1.5;
-  min-height: 1.5em;
-  color: var(--text);
-  animation: fadeInUp 0.4s ease;
+  background: #fafafa;
+  border-top: 1px solid #eee;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: none;
+}
+.captcha-reason.has-text {
+  animation: fadeInUp 0.35s ease forwards;
+}
+.captcha-widget__footer {
+  padding: 10px 12px;
+  background: #f9f9f9;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+}
+.captcha-verify-btn {
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  background: #ccc;
+  color: #888;
+  transition: background 200ms, color 200ms;
+}
+.captcha-verify-btn:not(:disabled) {
+  background: #5b8c3e;
+  color: #fff;
+  cursor: pointer;
+}
+.captcha-verify-btn:not(:disabled):hover {
+  background: #4a7230;
 }
 
 /* ---- Candle Glow ---- */

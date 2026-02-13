@@ -116,12 +116,30 @@
       <div class="chapter__content">
         <div class="chapter__emoji">💛</div>
         <div class="typewriter" id="tw4"></div>
-        <div id="counterInteraction" class="interaction hidden">
-          <button class="counter-btn" id="counterBtn">
-            <span class="counter-btn__number" id="counterNumber">0</span>
-            <span class="counter-btn__label">Tap to count</span>
-          </button>
-          <div class="counter-reason" id="counterReason"></div>
+        <div id="captchaInteraction" class="interaction hidden">
+          <div class="captcha-widget">
+            <div class="captcha-widget__header">
+              <div class="captcha-widget__check-area">
+                <div class="captcha-widget__checkbox" id="captchaCheckbox"></div>
+                <span class="captcha-widget__header-text">I'm not a robot</span>
+              </div>
+              <div class="captcha-widget__brand">
+                <div class="captcha-widget__brand-logo">reCAPTCHA</div>
+                <div class="captcha-widget__brand-sub">Privacy - Terms</div>
+              </div>
+            </div>
+            <div class="captcha-challenge">
+              <div class="captcha-challenge__bar">
+                <span class="captcha-challenge__title">Prove you're human — learn why I love you.</span>
+              </div>
+              <div class="captcha-challenge__prompt">Select all squares that include <strong>Logan</strong> <span class="captcha-hint">(hint: select all of them ;)</span></div>
+              <div class="captcha-grid" id="captchaGrid"></div>
+              <div class="captcha-reason" id="captchaReason"></div>
+            </div>
+            <div class="captcha-widget__footer">
+              <button class="captcha-verify-btn" id="captchaVerifyBtn" disabled>VERIFY</button>
+            </div>
+          </div>
         </div>
       </div>
     </section>

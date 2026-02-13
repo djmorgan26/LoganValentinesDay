@@ -27,9 +27,11 @@
 
   // Interactions
   const fortuneCookie = document.getElementById("fortuneCookie");
-  const counterBtn = document.getElementById("counterBtn");
-  const counterNumber = document.getElementById("counterNumber");
-  const counterReason = document.getElementById("counterReason");
+  const captchaInteraction = document.getElementById("captchaInteraction");
+  const captchaGrid        = document.getElementById("captchaGrid");
+  const captchaVerifyBtn   = document.getElementById("captchaVerifyBtn");
+  const captchaReasonEl    = document.getElementById("captchaReason");
+  const captchaCheckbox    = document.getElementById("captchaCheckbox");
   const hospitalBtn = document.getElementById("hospitalBtn");
   const hospitalBtnWrap = document.getElementById("hospitalBtnWrap");
   const willowReveal = document.getElementById("willowReveal");
@@ -43,7 +45,7 @@
     showRunning: false,
     soyFlipped: false,
     postcardsFlipped: { switzerland: false, japan: false, barcelona: false },
-    counterCount: 0,
+    captchaTiles: new Set(),
     chatMessages: [
       { role: "assistant", text: "Logan, ask me anything. I'll answer like it's our own little telepathic date-night thread." },
     ],
@@ -113,6 +115,7 @@
     "You're the best Netflix and chill partner in human history.",
     "You push me to be better without even trying.",
     "You love babies, you love animals, and you love me. That's the whole package.",
+    "You make every ordinary moment feel like something worth remembering.",
   ];
 
   // ============ SKIP SIGNAL ============
@@ -322,26 +325,38 @@
           });
         });
       } else if (chapterIdx === 4) {
-        // Counter
-        const el = document.getElementById("counterInteraction");
-        el.classList.remove("hidden");
-        const handler = () => {
-          if (state.counterCount >= loveReasons.length) {
-            setTimeout(resolve, 2000);
-            return;
-          }
-          state.counterCount++;
-          counterNumber.textContent = state.counterCount;
-          counterReason.textContent = loveReasons[state.counterCount - 1];
-          counterBtn.classList.remove("bounce");
-          void counterBtn.offsetWidth; // trigger reflow
-          counterBtn.classList.add("bounce");
-          if (state.counterCount >= loveReasons.length) {
-            counterBtn.querySelector(".counter-btn__label").textContent = "All found";
-            setTimeout(resolve, 2500);
-          }
-        };
-        counterBtn.addEventListener("click", handler);
+        captchaInteraction.classList.remove("hidden");
+        const IMAGE_PATH = "assets/Logan/15A12F00-EBF9-4918-AE43-3FF1921774DA_1_105_c.jpeg";
+        const positions = [
+          "0% 0%","50% 0%","100% 0%",
+          "0% 50%","50% 50%","100% 50%",
+          "0% 100%","50% 100%","100% 100%",
+        ];
+        positions.forEach((pos, idx) => {
+          const tile = document.createElement("div");
+          tile.className = "captcha-tile";
+          tile.style.setProperty("--tile-image", `url("${IMAGE_PATH}")`);
+          tile.style.setProperty("--tile-pos", pos);
+          captchaGrid.appendChild(tile);
+          tile.addEventListener("click", () => {
+            if (state.captchaTiles.has(idx)) return;
+            state.captchaTiles.add(idx);
+            tile.classList.add("selected");
+            const reason = loveReasons[state.captchaTiles.size - 1];
+            captchaReasonEl.textContent = reason || "✓ All reasons found!";
+            captchaReasonEl.classList.remove("has-text");
+            void captchaReasonEl.offsetWidth;
+            captchaReasonEl.classList.add("has-text");
+            if (state.captchaTiles.size >= 9) captchaVerifyBtn.disabled = false;
+          });
+        });
+        captchaVerifyBtn.addEventListener("click", () => {
+          if (captchaVerifyBtn.disabled) return;
+          captchaCheckbox.classList.add("checked");
+          captchaVerifyBtn.disabled = true;
+          captchaVerifyBtn.textContent = "Verified ✓";
+          setTimeout(resolve, 1800);
+        }, { once: true });
       }
     });
   }
