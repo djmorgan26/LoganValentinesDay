@@ -579,6 +579,34 @@ body {
 }
 .hospital-ui > * { pointer-events: auto; }
 
+.hospital-joystick {
+  position: absolute;
+  bottom: 40px;
+  left: 30px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 255, 170, 0.4);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 0 25px rgba(0, 255, 170, 0.15);
+  z-index: 215;
+  pointer-events: auto;
+  touch-action: none;
+  display: grid;
+  place-items: center;
+}
+
+.hospital-joystick__thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(0, 255, 170, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 15px rgba(0, 255, 170, 0.35);
+  transition: transform 60ms linear;
+}
+
 .hospital-msg {
   position: absolute;
   bottom: 80px;
@@ -629,6 +657,14 @@ body {
   color: var(--muted);
   font-size: 13px;
   pointer-events: none;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.hospital-hint__exit {
+  margin-top: 6px;
+  font-weight: 600;
+  color: var(--text);
 }
 
 .hospital-spots-left {
@@ -675,6 +711,61 @@ body {
   text-align: center;
 }
 
+.hospital-exit-confirm {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.8);
+  border: 1px solid rgba(0,255,170,0.4);
+  border-radius: 18px;
+  padding: 24px 28px;
+  color: var(--text);
+  width: min(320px, 80vw);
+  text-align: center;
+  display: grid;
+  gap: 18px;
+  pointer-events: auto;
+  animation: fadeInUp 0.6s ease;
+}
+
+.hospital-exit-confirm__title {
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.hospital-exit-confirm__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hospital-exit-confirm__btn {
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 150ms ease, background 150ms ease;
+}
+
+.hospital-exit-confirm__btn:hover {
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.12);
+}
+
+.hospital-exit-confirm__btn--accent {
+  border-color: rgba(0,255,170,0.8);
+  background: rgba(0,255,170,0.25);
+  color: #031b14;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -687,4 +778,11 @@ body {
   .dot-nav { right: 10px; gap: 10px; }
   .dot-nav__dot { width: 10px; height: 10px; }
   .hospital-msg { max-width: 90vw; font-size: 14px; padding: 12px 18px; }
+  .hospital-joystick {
+    width: 100px;
+    height: 100px;
+    left: 20px;
+    bottom: 20px;
+  }
+  .hospital-joystick__thumb { width: 46px; height: 46px; }
 }
