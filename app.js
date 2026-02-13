@@ -37,7 +37,7 @@
     musicStarted: false,
     showRunning: false,
     soyFlipped: false,
-    postcardsFlipped: { paris: false, tokyo: false, italy: false },
+    postcardsFlipped: { switzerland: false, japan: false, barcelona: false },
     counterCount: 0,
     chatMessages: [
       { role: "assistant", text: "Logan, ask me anything. I'll answer like it's our own little telepathic date-night thread." },
@@ -52,9 +52,9 @@
     {
       // Ch 0: Elephant Hearts
       lines: [
-        "Elephant hearts remember every kindness.",
-        "You're soft and steady",
-        "and somehow still ridiculous about everything.",
+        "Elephant hearts never forget the ones they love.",
+        "Three years in, and I still get that feeling every time I see you.",
+        "You're steady and soft and somehow still the most ridiculous person I know.",
         "I'm not letting go. Ever.",
       ],
       autoAdvanceDelay: 3000,
@@ -62,25 +62,25 @@
     {
       // Ch 1: Sushi Bar (interactive)
       lines: [
-        "We once invented a sushi menu with exactly one item.",
-        "Spoiler: it was spicy tuna roll. Every time.",
+        "If I had a dollar for every spicy tuna roll you've ever ordered...",
+        "I'd have enough to fly us both to Japan for the real thing.",
       ],
       interactive: true,
     },
     {
       // Ch 2: Postcards (interactive)
       lines: [
-        "Postcards from the future — where we're laughing somewhere new.",
-        "Flip a card. Pocket the daydream.",
+        "We've already made memories across the world.",
+        "Flip a card. Relive the adventure.",
       ],
       interactive: true,
     },
     {
       // Ch 3: Date Night
       lines: [
-        "Cooking + wine + pottery = chaotic romance.",
-        "It's giving cozy, romantic,",
-        "and you laughing at me for taking recipes too seriously.",
+        "Tonight: cooking, wine, and pottery.",
+        "Our kind of Valentine's Day.",
+        "Chaotic, romantic, and probably ending with clay on my face.",
       ],
       autoAdvanceDelay: 3000,
       candleGlow: true,
@@ -100,14 +100,14 @@
   ];
 
   const loveReasons = [
-    "The way you laugh at your own jokes before you finish telling them.",
-    "Your ridiculous dedication to skincare — and making me do it too.",
-    "How you make every room warmer just by walking in.",
-    "The look you give me when you think I'm not watching.",
-    "You turned 'spicy tuna roll' into a love language.",
-    "Your patience with my overthinking.",
-    "The way you say my name.",
-    "You chose me. Every day, you keep choosing me.",
+    "How genuine you are — no filter, no performance, just you.",
+    "The way you love me — fully, loudly, and without hesitation.",
+    "You're one of the smartest people I've ever met. Future Dr. Logan.",
+    "How comfortable we are together — silence with you is still my favorite.",
+    "Laughing with you until neither of us can breathe.",
+    "You're the best Netflix and chill partner in human history.",
+    "You push me to be better without even trying.",
+    "You love babies, you love animals, and you love me. That's the whole package.",
   ];
 
   // ============ TYPEWRITER ENGINE ============
@@ -310,11 +310,11 @@
     candleGlow.classList.remove("active");
 
     const lines = [
-      "You're my favorite place to be.",
-      "My favorite laugh.",
-      "My favorite future.",
+      "You're my favorite person to come home to.",
+      "My favorite laugh in any room.",
+      "My favorite future — med school, dachshunds, and all.",
       "",
-      "Love,",
+      "Love, always,",
       "<strong>David</strong>",
     ];
 

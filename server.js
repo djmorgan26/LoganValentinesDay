@@ -138,7 +138,7 @@ function readRequestBody(req) {
 }
 
 async function fetchGeminiReply(history, prompt) {
-  const instructions = `You are David writing lovingly to Logan. Keep responses under 120 words, warm, romantic, playful, and grounded in shared memories, travel jokes, elephant love, sushi gags, dachshund dreams, and open-world wandering.`;
+  const instructions = `You are David writing lovingly to Logan. You've been together 3+ years. Logan is at Emory Med School studying to be a dermatologist. You both love sushi (especially spicy tuna rolls), you dream of going to Japan, you've traveled to Switzerland (paragliding), Seattle (hiking), and Barcelona (clubbing). You want a dachshund together. Tonight is Valentine's Day and you're doing cooking + wine + pottery. Keep responses under 120 words, warm, romantic, playful, and grounded in these real details.`;
 
   const contents = [];
   history

@@ -30,16 +30,16 @@
   };
 
   const SURGERY_SPOTS = [
-    { name: "heart", label: "Heart (chest)", offset: { x: 0, y: 1.2, z: 0.35 }, message: "Love module installed. Warning: capacity infinite." },
-    { name: "brain", label: "Brain (head)", offset: { x: 0, y: 2.1, z: 0.3 }, message: "Uploading: every time you laughed at my jokes. Storage: full." },
-    { name: "arm", label: "Arm (left)", offset: { x: -0.7, y: 1.0, z: 0.3 }, message: "Hug pressure calibrated to: never letting go." },
-    { name: "eyes", label: "Eyes (face)", offset: { x: 0, y: 1.9, z: 0.5 }, message: "Visual target locked: only you. Forever." },
+    { name: "heart", label: "Heart (chest)", offset: { x: 0, y: 1.2, z: 0.35 }, message: "Love module installed. Warning: capacity infinite. Side effect: wanting to be near Logan always." },
+    { name: "brain", label: "Brain (head)", offset: { x: 0, y: 2.1, z: 0.3 }, message: "Uploading: 3 years of memories. Switzerland. Barcelona. Every spicy tuna roll. Storage: full." },
+    { name: "arm", label: "Arm (left)", offset: { x: -0.7, y: 1.0, z: 0.3 }, message: "Hug pressure calibrated to: never letting go. Skin contact analysis: flawless. Dr. Logan approved." },
+    { name: "eyes", label: "Eyes (face)", offset: { x: 0, y: 1.9, z: 0.5 }, message: "Visual target locked: only you. Dermatology scan complete — you're glowing. Literally." },
   ];
 
   const ROAM_SPOTS = [
-    { name: "vending", position: { x: -5, z: -4 }, message: "Even hospital food is better with you.", icon: "Vending Machine" },
-    { name: "window", position: { x: 5, z: -4 }, message: "Every view is better when you're next to me.", icon: "Window" },
-    { name: "desk", position: { x: -4, z: 3 }, message: "Patient discharged. Prognosis: happily ever after.", icon: "Nurse's Station" },
+    { name: "vending", position: { x: -5, z: -4 }, message: "It dispensed a spicy tuna roll. Of course it did. Everything reminds me of you.", icon: "Vending Machine" },
+    { name: "window", position: { x: 5, z: -4 }, message: "Remember paragliding in Switzerland? Every adventure is better with you next to me.", icon: "Window" },
+    { name: "desk", position: { x: -4, z: 3 }, message: "Patient chart reads: 'Prognosis — happily ever after. Attending physician: Dr. Logan.'", icon: "Nurse's Station" },
     { name: "door", position: { x: 0, z: 6 }, message: "Happy Valentine's Day, Logan.", icon: "Exit" },
   ];
 
@@ -415,7 +415,7 @@
     animateSitUp();
 
     showUI(`<div class="hospital-complete">
-      <div class="hospital-complete__text">System fully operational.<br>Primary directive: love Logan.</div>
+      <div class="hospital-complete__text">System fully operational.<br>Primary directive: love Logan. Secondary directive: get a dachshund.</div>
       <button class="hospital-explore-btn" id="exploreBtn">Let's explore</button>
     </div>`);
 
