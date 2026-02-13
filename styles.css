@@ -131,6 +131,44 @@ body {
   background: rgba(255,255,255,0.3);
 }
 
+/* ====== SKIP NAV ====== */
+.skip-nav {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  gap: 16px;
+  transition: opacity 0.4s ease;
+}
+.skip-nav.hidden { display: none; }
+.skip-nav__btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.35);
+  background: rgba(0,0,0,0.4);
+  color: rgba(255,255,255,0.85);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 200ms ease, border-color 200ms ease, transform 150ms ease;
+  backdrop-filter: blur(6px);
+}
+.skip-nav__btn:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.65);
+  transform: scale(1.12);
+}
+.skip-nav__btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+  transform: none;
+}
+
 /* ====== CHAPTERS ====== */
 .chapters {
   position: relative;

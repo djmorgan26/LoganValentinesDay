@@ -12,6 +12,11 @@
   const chapters = document.getElementById("chapters");
   const bgm = document.getElementById("bgm");
 
+  // Skip nav
+  const skipNav = document.getElementById("skipNav");
+  const skipPrev = document.getElementById("skipPrev");
+  const skipNext = document.getElementById("skipNext");
+
   // Chat
   const chatMessages = document.getElementById("chatMessages");
   const chatForm = document.getElementById("chatForm");
@@ -110,23 +115,49 @@
     "You love babies, you love animals, and you love me. That's the whole package.",
   ];
 
+  // ============ SKIP SIGNAL ============
+  let _skipFire = null; // resolves the current chapter's skip promise
+
+  function armSkip() {
+    // Each chapter gets a fresh skip promise; _skipFire resolves it
+    _skipFire = null;
+    _currentSkip = new Promise((r) => { _skipFire = r; });
+  }
+  let _currentSkip = new Promise(() => {}); // never resolves by default
+
+  function triggerSkip() {
+    if (_skipFire) { const fn = _skipFire; _skipFire = null; fn(); }
+  }
+
   // ============ TYPEWRITER ENGINE ============
   function typewriteLine(el, text, speed = 40) {
     return new Promise((resolve) => {
       let i = 0;
+      let done = false;
       const cursor = document.createElement("span");
       cursor.className = "cursor";
       el.appendChild(cursor);
 
+      function finish() {
+        if (done) return;
+        done = true;
+        cursor.before(document.createTextNode(text.slice(i)));
+        cursor.remove();
+        resolve();
+      }
+
+      // Resolve instantly when skip fires
+      _currentSkip.then(finish);
+
       function tick() {
+        if (done) return;
         if (i < text.length) {
           cursor.before(document.createTextNode(text[i]));
           i++;
           setTimeout(tick, speed);
         } else {
           setTimeout(() => {
-            cursor.remove();
-            resolve();
+            if (!done) { cursor.remove(); done = true; resolve(); }
           }, 400);
         }
       }
@@ -145,7 +176,10 @@
   }
 
   function pause(ms) {
-    return new Promise((r) => setTimeout(r, ms));
+    return Promise.race([
+      new Promise((r) => setTimeout(r, ms)),
+      _currentSkip,
+    ]);
   }
 
   // ============ PARTICLES ============
@@ -215,10 +249,13 @@
     state.showRunning = true;
     chapters.classList.add("visible");
     dotNav.classList.add("visible");
+    skipNav.classList.remove("hidden");
     startParticles();
 
     for (let i = 0; i < TOTAL_CHAPTERS; i++) {
+      armSkip(); // fresh skip signal per chapter
       state.currentChapter = i;
+      updateSkipBtns();
       const section = document.getElementById("ch" + i);
       const config = chapterConfig[i];
 
@@ -255,6 +292,9 @@
 
   function showInteraction(chapterIdx) {
     return new Promise((resolve) => {
+      // Skip signal also resolves interactions
+      _currentSkip.then(resolve);
+
       if (chapterIdx === 1) {
         // Soy joke
         const el = document.getElementById("soyInteraction");
@@ -423,6 +463,24 @@
     const ch5 = document.getElementById("ch5");
     if (ch5) ch5.scrollIntoView({ behavior: "smooth" });
   };
+
+  // ============ SKIP NAV ============
+  function updateSkipBtns() {
+    skipPrev.disabled = state.currentChapter <= 0;
+    skipNext.disabled = state.currentChapter >= TOTAL_CHAPTERS - 1;
+  }
+
+  skipNext.addEventListener("click", () => {
+    if (state.currentChapter >= TOTAL_CHAPTERS - 1) return;
+    triggerSkip();
+  });
+
+  skipPrev.addEventListener("click", () => {
+    if (state.currentChapter <= 0) return;
+    const target = state.currentChapter - 1;
+    const section = document.getElementById("ch" + target);
+    if (section) section.scrollIntoView({ behavior: "smooth" });
+  });
 
   // ============ CURTAIN ============
   curtainBtn.addEventListener("click", async () => {
